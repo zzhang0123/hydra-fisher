@@ -1,6 +1,7 @@
 import numpy as np
 import fisher_utils as fu
 import os
+from fisher_utils import myTiming_rank0
 
 # Data preprocessing
 
@@ -79,6 +80,7 @@ class DataProcessing():
         return
         
     # Generate time series visibility response data
+    @myTiming_rank0
     def generate_time_series_data(self, vis_array, times):
         """
         Input:
@@ -158,6 +160,7 @@ class DataProcessing():
 
         return result
     
+    @myTiming_rank0
     def baseline_filter(self, response_matr, cross_only=True, one_way_baseline=True):
         """
         Input: response_matr.shape=(NFREQS, NTIMES, NANTS, NANTS, NLMS*2), data type=complex
