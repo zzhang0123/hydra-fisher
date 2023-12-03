@@ -3,7 +3,6 @@ This module is adapted from https://github.com/radiocosmology/caput/blob/master/
 """
 import numpy as np
 import logging
-import time
 
 rank = 0
 size = 1

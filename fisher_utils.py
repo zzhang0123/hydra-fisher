@@ -1,8 +1,13 @@
 import time
 import functools
 import numpy as np
+import glob
+import re
 import os
+from mpiutils import rank0
 
+
+radian_per_hour = 2*np.pi/24
 
 def calculate_function_values(var1_values, var2_values, your_function):
     """
@@ -39,6 +44,20 @@ def myTiming(func):
         return(result)
     return(decorated_function)
 
+def myTiming_rank0(func):
+    @functools.wraps(func)
+    def decorated_function(*args, **kwargs):
+        if rank0:
+            print("Entering" + str(func))
+            begin = time.perf_counter()
+            print(begin)
+        result = func(*args, **kwargs)
+        if rank0:
+            end = time.perf_counter()
+            print(end)
+            print("Elaspsed time", end - begin)
+        return(result)
+    return(decorated_function)
 
 # Define the decorator
 def complex_to_real_array_decorator(func):
@@ -99,3 +118,21 @@ def save_array_to_directory(array, directory, filename):
     # Save the array
     np.save(file_path, array)
     return
+
+
+def get_sorted_filenames(directory, pattern):
+    # Construct the joined pattern to match files
+    # pattern = 'response_sh_*.npy' or 'response_sh_ellm_*.npy' or ...
+    join_pattern = os.path.join(directory, pattern)
+
+    # Use glob to find files matching the joined pattern
+    files = glob.glob(join_pattern)
+
+    # Filter out files that don't have a four-digit number following "response_sh_"
+    regex = re.compile(r'response_sh_(\d{4})\.npy$')
+    filtered_files = [f for f in files if regex.search(os.path.basename(f))]
+
+    # Sort the files
+    sorted_files = sorted(filtered_files, key=lambda x: int(regex.search(os.path.basename(x)).group(1)))
+
+    return sorted_files
