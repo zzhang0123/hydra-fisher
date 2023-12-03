@@ -140,3 +140,15 @@ def get_sorted_filenames(directory, pattern):
     sorted_files = sorted(filtered_files, key=lambda x: int(regex.search(os.path.basename(x)).group(1)))
 
     return sorted_files
+
+
+def extract_freqs(file_path):
+    with open(file_path, 'r') as file:
+        for line in file:
+            # Check if the line contains 'freqs:'
+            if 'freqs:' in line:
+                # Extract the frequency value using regex
+                match = re.search(r'freqs:\s*(\d+\.\d+)', line)
+                if match:
+                    return float(match.group(1))
+    return None

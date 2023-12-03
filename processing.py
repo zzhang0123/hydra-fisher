@@ -78,9 +78,9 @@ class DataProcessing():
         """
         shape = vis_array.shape
         assert shape[1]==1, "The time-axis dimension of the input array must be 1."
-        data = vis_array[:,0,:,:,:].reshape(shape[0], shape[2], shape[3], self.NLMS, 2) # data.shape=(NFREQS, NANTS, NANTS, NLMS, 2)
+        data = vis_array[:,0,:,:,:].reshape(shape[0], shape[2]*shape[3], self.NLMS, 2) # data.shape=(NFREQS, NANTS*NANTS, NLMS, 2)
         rot_array = create_rotation_matrices(self.m, times) # rot_array.shape=(NLMS, N_times, 2, 2)
-        data = np.einsum('mtab, fijmb -> ftijma', rot_array, data, optimize=True) # data_rot.shape=(NFREQS, NANTS, NANTS, NLMS, N_times, 2)
+        data = np.einsum('mtab, fimb -> ftima', rot_array, data, optimize=True) # data_rot.shape=(NFREQS, NANTS, NANTS, NLMS, N_times, 2)
         data = data.reshape(shape[0], times.size, shape[2], shape[3], self.NLMS*2)
         return data    
 
