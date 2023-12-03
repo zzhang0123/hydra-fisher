@@ -1,6 +1,8 @@
 import time
 import functools
 import numpy as np
+import os
+
 
 def calculate_function_values(var1_values, var2_values, your_function):
     """
@@ -74,3 +76,26 @@ class ClassDecoratorChangeRefences:
             instance.nu_pivot = self.nu_pivot
             return instance
         return wrapped
+
+
+def are_directories_equivalent(dir1, dir2):
+    # Convert both paths to absolute paths and normalize them
+    normalized_dir1 = os.path.normpath(os.path.abspath(dir1))
+    normalized_dir2 = os.path.normpath(os.path.abspath(dir2))
+
+    # Additionally, normalize the case for case-insensitive file systems
+    return os.path.normcase(normalized_dir1) == os.path.normcase(normalized_dir2)
+ 
+
+def save_array_to_directory(array, directory, filename):
+    # Check if the directory exists
+    if not os.path.exists(directory):
+        # Create the directory if it doesn't exist
+        os.makedirs(directory)
+
+    # Full path for the file
+    file_path = os.path.join(directory, filename)
+
+    # Save the array
+    np.save(file_path, array)
+    return

@@ -1,2 +1,2 @@
-from . import sky_covariance, fisher_util
-from .fisher_util import *
+from . import fisher_utils, sky_covariance, processing, fisher_information
+from .fisher_utils import *
