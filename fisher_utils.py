@@ -129,7 +129,11 @@ def get_sorted_filenames(directory, pattern):
     files = glob.glob(join_pattern)
 
     # Filter out files that don't have a four-digit number following "response_sh_"
-    regex = re.compile(r'response_sh_(\d{4})\.npy$')
+    # Assuming pattern is something like 'response_sh_*.npy' or 'response_sh_ellm_*.npy'
+    # We extract the part before '*' and use it in the regex
+    base_pattern = pattern.split('*')[0]  # Extract the base part of the pattern
+    regex_pattern = rf"{re.escape(base_pattern)}(\d{{4}})\.npy$"
+    regex = re.compile(regex_pattern)
     filtered_files = [f for f in files if regex.search(os.path.basename(f))]
 
     # Sort the files
