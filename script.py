@@ -1,4 +1,4 @@
-from mpiutils import partition_list_mpi
+from mpiutils import *
 
 from processing import DataProcessing
 
