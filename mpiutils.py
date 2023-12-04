@@ -136,7 +136,7 @@ def parallel_jobs_no_gather_no_return(func, glist, method="con", comm=_comm):
     ----------
     func : function
         Function to apply.
-    glist : list
+    glist : zipped list
         List of map over. Must be globally defined.
     root : None or Integer
         Which process should gather the results, all processes will gather the results if None.
@@ -157,15 +157,13 @@ def parallel_jobs_no_gather_no_return(func, glist, method="con", comm=_comm):
     if comm is None or comm.size == 1:
         return [func(item) for item in glist]
 
-    # Pair up each list item with its position.
-    zlist = list(enumerate(glist))
 
     # Partition list based on MPI rank
-    llist = partition_list_mpi(zlist, method=method, comm=comm)
+    llist = partition_list_mpi(glist, method=method, comm=comm)
 
     # Operate on sublist
-    for ind, item in llist:
-        func(item)
+    for zipped_item in llist:
+        func(zip(*zipped_item))
 
     # Synchronize
     barrier(comm=comm)
