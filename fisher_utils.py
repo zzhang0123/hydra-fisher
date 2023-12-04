@@ -138,8 +138,11 @@ def get_sorted_filenames(directory, pattern):
 
     # Sort the files
     sorted_files = sorted(filtered_files, key=lambda x: int(regex.search(os.path.basename(x)).group(1)))
+    
+    # Extract only the filenames
+    sorted_filenames = [os.path.basename(f) for f in sorted_files]
 
-    return sorted_files
+    return sorted_filenames
 
 
 def extract_freqs(file_path):

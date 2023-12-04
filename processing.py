@@ -52,7 +52,18 @@ class DataProcessing():
         # ellm.shape=(NLMS*2, 2), data type=int
         self.ell = ellm[:,0]
         self.m = ellm[:,1]
+        
+        marray = ellm[:,1]
         self.NLMS = ellm.shape[0]
+        
+        self.mmodes_mask = np.concatenate( (np.arange(self.NLMS), self.NLMS + np.where(self.m>0)[0]) )
+        ell = np.append(self.ell, self.ell[np.where(self.m>0)])
+        m = np.append(self.m, self.m[np.where(self.m>0)])
+        self.lmodes_mask = np.where(ell>=self.minimum_ell)[0]
+        # Update the masked ell and m arrays
+        self.ell = ell[np.where(ell>=self.minimum_ell)]
+        self.m = m[np.where(ell>=self.minimum_ell)]
+        
 
         # Apply baseline filter
         vis = self.baseline_filter(vis, cross_only=self.cross_only, one_way_baseline=self.one_way_baseline)
@@ -63,14 +74,17 @@ class DataProcessing():
         if save_XtX:
             XtX =list(np.zeros(self.NFREQS))
             for time in time_sequence:
-                vis_time = self.generate_time_series_data(vis, time).reshape(self.NFREQS, self.n_baselines, self.NLMS*2) # vis_time.shape=(NFREQS, NBASELINES, NLMS*2), data type=complex
-                vis_time = self.ellm_filter(vis_time, minimum_ell=self.minimum_ell) # vis_time.shape=(NFREQS, NBASELINES, NLMS*2 - Nmodes_to_mask, 2), data type=float
+                time = [time]
+                vis_time = self.generate_time_series_data(vis, marray, time).reshape(self.NFREQS, self.n_baselines, self.NLMS*2) 
+                # vis_time.shape=(NFREQS, NBASELINES, NLMS*2), data type=complex
+                vis_time = self.ellm_filter(vis_time)
+                # vis_time.shape=(NFREQS, NBASELINES, NLMS*2 - Nmodes_to_mask, 2), data type=float
                 for freq in range(self.NFREQS):
                     XtX[freq] += np.einsum('alr, amr -> lm', vis_time[freq], vis_time[freq], optimize=True)
             XtX = np.array(XtX) # XtX.shape=(NFREQS, NLMS*2 - Nmodes_to_mask, NLMS*2 - Nmodes_to_mask), data type=float
             fu.save_array_to_directory(XtX , save_directory, 'XtX'+vis_filename)
         else:
-            vis = self.generate_time_series_data(vis, time_sequence) # vis.shape=(NFREQS, NTIMES, NBASELINES, NLMS*2), data type=complex
+            vis = self.generate_time_series_data(vis,  marray, time_sequence) # vis.shape=(NFREQS, NTIMES, NBASELINES, NLMS*2), data type=complex
             vis = self.ellm_filter(vis, minimum_ell=self.minimum_ell) # vis.shape=(NFREQS, NTIMES, NBASELINES, NLMS*2 - Nmodes_to_mask, 2), data type=float
             fu.save_array_to_directory(vis, save_directory, vis_filename)
             
@@ -81,7 +95,7 @@ class DataProcessing():
         
     # Generate time series visibility response data
     @myTiming_rank0
-    def generate_time_series_data(self, vis_array, times):
+    def generate_time_series_data(self, vis_array, ms, times):
         """
         Input:
         vis_array.shape=(NFREQS, NTIMES=1, NBASLINES, NLMS*2), data type=complex
@@ -93,7 +107,7 @@ class DataProcessing():
         times = np.array(times)
         shape = vis_array.shape
         data = vis_array.reshape(shape[0], -1, self.NLMS, 2) # shape=(NFREQS, NBASELINES, NLMS, 2), data type=complex
-        rot_array = create_rotation_matrices(self.m, times) # rot_array.shape=(NLMS, N_times, 2, 2)
+        rot_array = create_rotation_matrices(ms, times) # rot_array.shape=(NLMS, N_times, 2, 2)
         data = np.einsum('mtab, fimb -> ftima', rot_array, data, optimize=True) # data_rot.shape=(NFREQS, N_times, NBASLINES, NLMS, 2), data type=complex
         data = data.reshape(shape[0], times.size, -1, self.NLMS*2) # data.shape=(NFREQS, N_times, NBASLINES, NLMS*2), data type=complex
         return data    
@@ -195,7 +209,7 @@ class DataProcessing():
         return result
     
     @fu.complex_to_real_array_decorator
-    def ellm_filter(self, response_matr, minimum_ell=1):
+    def ellm_filter(self, response_matr):
         """
         This is to be applied after the baseline_filter function.
 
@@ -203,27 +217,15 @@ class DataProcessing():
 
         Output: result.shape=(NFREQS, NTIMES, NBASELINES, NLMS*2 - Nmodes_to_mask), data type=complex
         """
-        # Mask the SH modes to avoid the ones corresponding to the imaginary part of the m=0 modes.
-        useful_modes = np.concatenate( (np.arange(self.NLMS), self.NLMS + np.where(self.m>0)[0]) )
-        ell = np.append(self.ell, self.ell[np.where(self.m>0)])
-        m = np.append(self.m, self.m[np.where(self.m>0)])
-        result = response_matr[..., useful_modes]
-
-        # Mask the SH modes whose ell is greater than the minimum_ell
-        result = result[..., np.where(ell>=minimum_ell)[0]] # shape=(NFREQS, NTIMES, NBASELINES, Nsources), where Nsources = NLMS*2 - Nmodes_to_mask
-
-        # Update the ell and m arrays
-        self.ell = ell[np.where(ell>=minimum_ell)]
-        self.m = m[np.where(ell>=minimum_ell)]
+        result = response_matr[..., self.mmodes_mask][..., self.lmodes_mask] 
         return result
-
-
+        
 
 def create_rotation_matrices(m, t):
     m = np.array(m)
     t = np.array(t)
-    N_m = len(m)
-    N_t = len(t)
+    N_m = m.size
+    N_t = t.size
     result = np.zeros((N_m, N_t, 2, 2))
 
     for i, m_val in enumerate(m):

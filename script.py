@@ -24,7 +24,6 @@ for i in range(len(vis_file_local_list)):
     VisResponse(vis_file_local, 
                 ellm_file_local, 
                 save_directory,
-                generate_time_series_data=True, 
                 start_time = radian_per_hour * 4,     
                 end_time = radian_per_hour * 6.25,  
                 step_time = radian_per_hour * (10.7 / 3600),    
