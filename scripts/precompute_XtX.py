@@ -26,7 +26,7 @@ for i in range(len(vis_file_local_list)):
                 save_directory,
                 start_time = radian_per_hour * 4,     
                 end_time = radian_per_hour * 6.25,  
-                step_time = radian_per_hour * (10.7 / 3600),    
+                step_time = radian_per_hour * (40 / 3600),    
                 reference_time = 0.10183045,  
                 save_XtX=True)
 

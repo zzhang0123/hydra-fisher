@@ -65,18 +65,18 @@ freqs = np.unique(uvd.freq_array)
 lsts = np.unique(uvd.lst_array)
 antpos, antnums = uvd.get_ENU_antpos(center=False, pick_data_ants=True)
 ants = {}
-for i in range(len(antnums)):
-    ants[antnums[i]] = antpos[i]
+#for i in range(len(antnums)):
+#    ants[antnums[i]] = antpos[i]
+ants[0]=antpos[0] 
 
-
-#radian_per_hour = 2*np.pi/24
-#start_time = radian_per_hour * 4     
-#end_time = radian_per_hour * 6.25  
-##step_time = radian_per_hour * (10.7 / 3600)
-#step_time = radian_per_hour * (40 / 3600)
-#lsts = np.arange(start_time, end_time, step_time)
+radian_per_hour = 2*np.pi/24
+start_time = radian_per_hour * 4     
+end_time = radian_per_hour * 6.25  
+#step_time = radian_per_hour * (10.7 / 3600)
+step_time = radian_per_hour * (40 / 3600)
+lsts = np.arange(start_time, end_time, step_time)
     
-lsts[0] = 2*np.pi/24 * 5.1
+#lsts[0] = 2*np.pi/24 * 5.1
 
 # Get number of modes
 _ell, _m = hp.Alm().getlm(lmax=lmax)
@@ -151,16 +151,12 @@ comm.Barrier()
 if myid == 0:
     print("(Workers finished simulation.)")
 
-# Save operator to .npy file for each chunk
-outfile = os.path.join(outdir, "response_sh_%04d" % myid)
-np.save(outfile, vis)
-print("Output file:", "response_sh_%04d" % myid)
 
-# Output ell, m values
-if myid == 0:
-    out_lm = os.path.join(outdir, "response_sh_ellm")
-    print("Output file:", "response_sh_ellm")
-    np.save(out_lm, np.column_stack((ell, m)))
+# Save operator to .npy file for each chunk
+outfile = os.path.join(outdir, "auto_correlation_%04d" % myid)
+np.save(outfile, vis)
+print("Output file:", "auto_correlation_%04d" % myid)
+
     
 comm.Barrier()
 sys.exit(0)
