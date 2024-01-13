@@ -27,7 +27,8 @@ class DataProcessing():
                  end_time=2*np.pi,  # end_time: end time of the time series data
                  step_time=0.01,    # step_time: time step of the time series data
                  reference_time=0,  # reference_time: reference time for the time series data, i.e. the time of the input data.
-                 save_XtX=True):    # if True, save the transposed response matrix multiply the response matrix to the save_directory; if False, just save the time series response matrices.
+                 noise_scale=None,     # noise_scale: noise scale of the time series data
+                 save_XtX=True):    # if True, save the NORMALIZED transposed response matrix multiply the response matrix to the save_directory; if False, just save the time series response matrices.
         """
         Output:
         saved files: vis_filename and ellm_filename in the save_directory; if save_XtX=True, XtXvis_filename in the save_directory
@@ -72,14 +73,14 @@ class DataProcessing():
 
         if save_XtX:
             XtX =list(np.zeros(self.NFREQS))
-            for time in time_sequence:
-                time = [time]
+            for i in range(len(time_sequence)):
+                time = [time_sequence[i]]
                 vis_time = self.generate_time_series_data(vis, marray, time).reshape(self.NFREQS, self.n_baselines, self.NLMS*2) 
                 # vis_time.shape=(NFREQS, NBASELINES, NLMS*2), data type=complex
                 vis_time = self.ellm_filter(vis_time)
                 # vis_time.shape=(NFREQS, NBASELINES, NLMS*2 - Nmodes_to_mask, 2), data type=float
                 for freq in range(self.NFREQS):
-                    XtX[freq] += np.einsum('alr, amr -> lm', vis_time[freq], vis_time[freq], optimize=True)
+                    XtX[freq] += np.einsum('alr, amr -> lm', vis_time[freq]/noise_scale[freq, i], vis_time[freq]/noise_scale[freq, i], optimize=True)
             XtX = np.array(XtX) # XtX.shape=(NFREQS, NLMS*2 - Nmodes_to_mask, NLMS*2 - Nmodes_to_mask), data type=float
             fu.save_array_to_directory(XtX , save_directory, 'XtX'+vis_filename)
         else:
