@@ -109,7 +109,8 @@ def vis_sim_per_source(
     beam_list: Sequence[UVBeam],
     precision: int = 2,
     polarized: bool = False,
-    beam_idx: Optional[np.ndarray] = None
+    beam_idx: Optional[np.ndarray] = None,
+    subarr_ant=None
 ):
     """
     Calculate visibility from an input intensity map and beam model. This is
