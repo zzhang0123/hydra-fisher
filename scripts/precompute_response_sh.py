@@ -129,7 +129,7 @@ if myid == 0:
 # Loop over blocks, one block per worker
 # Run simulation for each block of frequencies
 tstart = time.time()
-ell, m, vis = hydra.noise_simulator.simulate_vis_gsm_map(
+vis = hydra.noise_simulator.simulate_vis_gsm_map(
                     lmax=lmax,
                     nside=nside,
                     ants=ants,

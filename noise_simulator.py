@@ -374,10 +374,6 @@ def simulate_vis_per_source(
         myid = comm.Get_rank()
         nworkers = comm.Get_size()
 
-    assert len(ants) == len(
-        beams
-    ), "The `beams` list must have as many entries as the ``ants`` dict."
-
     assert fluxes.shape == (
         ra.size,
         freqs.size,
@@ -604,7 +600,7 @@ def simulate_vis_gsm_map(
         with open(logfile, 'a') as f:
             f.write("%s Finished all.\n" % (datetime.now()))
 
-    return ell, m, np.sum(vis_pix, axis=-1)
+    return np.sum(vis_pix, axis=-1)
 
 
 
