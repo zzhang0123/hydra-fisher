@@ -574,7 +574,7 @@ def simulate_vis_gsm_map(
     # GSM 
     gsm = GlobalSkyModel()
     fluxes = gsm.generate(freqs/1e6)
-    hp.ud_grade(fluxes, nside_out=nside)
+    fluxes = hp.ud_grade(fluxes, nside_out=nside)
     fluxes = np.swapaxes(fluxes,0,1)
     # fluxes = np.ones((npix, freqs.size))
 
