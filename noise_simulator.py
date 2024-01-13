@@ -57,7 +57,9 @@ def run_checks(
     ), "I_sky must have shape (NSRCS,)."
 
     # Get the number of unique beams
-    nbeam = len(beam_list)
+    #nbeam = len(beam_list)
+    beam_list = [beam_list[0]]
+    nbeam = 1
 
     # Check the beam indices
     if beam_idx is None:
