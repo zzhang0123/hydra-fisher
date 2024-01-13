@@ -68,6 +68,14 @@ ants = {}
 for i in range(len(antnums)):
     ants[antnums[i]] = antpos[i]
 
+
+radian_per_hour = 2*np.pi/24
+start_time = radian_per_hour * 4     
+end_time = radian_per_hour * 6.25  
+#step_time = radian_per_hour * (10.7 / 3600)
+step_time = radian_per_hour * (40 / 3600)
+lsts = np.arange(start_time, end_time, step_time)
+
 # Get number of modes
 _ell, _m = hp.Alm().getlm(lmax=lmax)
 Nmodes = _ell.size
