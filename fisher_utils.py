@@ -50,11 +50,11 @@ def myTiming_rank0(func):
         if rank0:
             print("Entering" + str(func))
             begin = time.perf_counter()
-            print(begin)
+            # print(begin)
         result = func(*args, **kwargs)
         if rank0:
             end = time.perf_counter()
-            print(end)
+            # print(end)
             print("Elaspsed time", end - begin)
         return(result)
     return(decorated_function)

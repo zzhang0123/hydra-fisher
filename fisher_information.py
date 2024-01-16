@@ -1,10 +1,23 @@
 import numpy as np
 import fisher_utils as fu
 from mpiutils import *
-import gc
+
 
 ###################################################################################################
 # Fisher matrix class
+
+
+
+def trace_trick(M1, C1, M2, C2):
+    """
+    C1, C2 are diagonal matrices.
+    M1, M2 are matrices.
+    
+    (1/2) * Tr(M1 @ C1 @ M2 @ C2) = 0.5 * np.einsum('i, ij, j', diag(C2), M1 * M2.T, diag(C1))
+    """
+    return 0.5 * np.einsum('i, ij, j', C2, M1 * M2.T, C1)
+
+# Another trick: Tr(M1 @ C1 @ M2 @ C2) = Tr(M2.T @ C1 @ M1.T @ C2)
 
 class FisherInformation():
     def __init__(self, APS_obj_list, freqs, ell, directory, pattern):
@@ -21,11 +34,10 @@ class FisherInformation():
         self.sorted_filenames = fu.get_sorted_filenames(directory, pattern, get_path=True)
 
         self.SED_all = np.array([APS_obj.SED for APS_obj in APS_obj_list])
-        C_ell_all = np.array([0.5 * APS_obj.angular_covariance(ell) for APS_obj in APS_obj_list]).flatten() # 0.5 factor accounts for the real/imag parts of the covariance
+        self.C_ell_all = np.array([0.5 * APS_obj.angular_covariance(ell) for APS_obj in APS_obj_list]).flatten() # 0.5 factor accounts for the real/imag parts of the covariance
 
-        M = self.operator(self.SED_all, self.SED_all)
-        self.C_aux = np.linalg.inv(np.diag(1/C_ell_all) + M) 
-        self.C_ell_all = np.diag(C_ell_all)
+        self.M = self.operator(self.SED_all, self.SED_all)
+        self.C_aux = np.linalg.inv(np.diag(1/self.C_ell_all) + self.M) 
 
         self.all_params_list = self.all_params_list()
         self.n_all_params = len(self.all_params_list)
@@ -61,17 +73,16 @@ class FisherInformation():
         else:
             raise ValueError("The index of the angular structure parameter is wrong.")
         
-        return np.diag(aux.flatten())
+        return aux.flatten()
 
     def F_alpha_beta_aa(self, field1_index, parameter1_index, field2_index, parameter2_index):
         """
         Both parameters are angular structure parameters.
         """
         aux = self.calculation_module()  # add parentheses to avoid memory error
-        aux_1 = aux @ self.generate_partial_derivative_C_ell_all(field1_index, parameter1_index)
-        aux_2 = aux @ self.generate_partial_derivative_C_ell_all(field2_index, parameter2_index)
-        return 0.5 * np.trace(aux_1 @ aux_2)
-
+        aux_1 = self.generate_partial_derivative_C_ell_all(field1_index, parameter1_index)
+        aux_2 = self.generate_partial_derivative_C_ell_all(field2_index, parameter2_index)
+        return trace_trick(aux, aux_1, aux, aux_2)
 
     def F_alpha_beta_af(self, field1_index, parameter1_index, field2_index, parameter2_index):
         """
@@ -81,37 +92,22 @@ class FisherInformation():
         aux_0 = self.calculation_module()
         C_partial = self.generate_partial_derivative_C_ell_all(field1_index, parameter1_index)
         aux_1_l = self.calculation_module(order=1, left_type=True, field1_ind=field2_index, param1_ind=parameter2_index)
-        aux_1_r = self.calculation_module(order=1, left_type=False, field2_ind=field2_index, param2_ind=parameter2_index)
-        
-        result = (aux_0 @ C_partial) @ (aux_1_r @ self.C_ell_all) 
-        result += (aux_1_l @ C_partial) @ (aux_0 @ self.C_ell_all)
 
-        return 0.5 * np.trace(result)
+        result = 2 * trace_trick(aux_1_l, C_partial, aux_0, self.C_ell_all)
 
+        return result
+    
     def F_alpha_beta_ff(self, field1_index, parameter1_index, field2_index, parameter2_index):
-        """
-        Both parameters are SED (frequency/spectral) parameters.
-        """
-        aux_0 = self.calculation_module() @ self.C_ell_all
-        aux_f1_f2 = self.calculation_module(order=2, field1_ind=field1_index, param1_ind=parameter1_index, field2_ind=field2_index, param2_ind=parameter2_index) @ self.C_ell_all
-        aux_f2_f1 = self.calculation_module(order=2, field1_ind=field2_index, param1_ind=parameter2_index, field2_ind=field1_index, param2_ind=parameter1_index) @ self.C_ell_all
-        result = aux_0 @ aux_f1_f2 + aux_f2_f1 @ aux_0
-        del aux_0, aux_f1_f2, aux_f2_f1
-        gc.collect() # garbage collection, to avoid memory error
+        aux1 = self.calculation_module() 
+        aux2 = self.calculation_module(order=2, field1_ind=field1_index, param1_ind=parameter1_index, field2_ind=field2_index, param2_ind=parameter2_index)
+        result = 2 * trace_trick(aux1, self.C_ell_all, aux2, self.C_ell_all)
 
-        aux_f1_1_l = self.calculation_module(order=1, left_type=True, field1_ind=field1_index, param1_ind=parameter1_index) @ self.C_ell_all
-        aux_f2_1_l = self.calculation_module(order=1, left_type=True, field1_ind=field2_index, param1_ind=parameter2_index) @ self.C_ell_all
-        result +=  aux_f2_1_l @ aux_f1_1_l
-        del aux_f1_1_l, aux_f2_1_l
-        gc.collect() # garbage collection, to avoid memory error
-        
-        aux_f1_1_r = self.calculation_module(order=1, left_type=False, field2_ind=field1_index, param2_ind=parameter1_index) @ self.C_ell_all
-        aux_f2_1_r = self.calculation_module(order=1, left_type=False, field2_ind=field2_index, param2_ind=parameter2_index) @ self.C_ell_all
-        result += aux_f1_1_r @ aux_f2_1_r
-        del aux_f1_1_r, aux_f2_1_r
-        gc.collect()
+        aux2 = self.calculation_module(order=1, left_type=True, field1_ind=field1_index, param1_ind=parameter1_index)
+        aux1 = self.calculation_module(order=1, left_type=True, field1_ind=field2_index, param1_ind=parameter2_index)
+        result += 2 * trace_trick(aux1, self.C_ell_all, aux2, self.C_ell_all)
 
-        return 0.5 * np.trace(result)
+        return result
+
 
     @fu.myTiming_rank0
     def F_alpha_beta(self, field1, param1, field2, param2):
@@ -132,20 +128,26 @@ class FisherInformation():
     
     def parallel_Fisher_calculation(self):
         """
-        Calculate the Fisher matrix in parallel.
+        Calculate the upper right triangle Fisher matrix in parallel.
         """
 
-        def Fisher_matrix_row(inds_pair):
-            field_1_ind, param_1_ind = inds_pair
-            row_vector = np.zeros(self.n_all_params)
-            for i in range(self.n_all_params):
-                field_2_ind, param_2_ind = self.all_params_list[i]
+        def Fisher_matrix_row(ind):
+            field_1_ind, param_1_ind = self.all_params_list[ind]
+            row_vector = np.zeros(self.n_all_params - ind)
+            for i in range(self.n_all_params - ind):
+                field_2_ind, param_2_ind = self.all_params_list[ind + i]
                 row_vector[i] = self.F_alpha_beta(field_1_ind, param_1_ind, field_2_ind, param_2_ind)
             return row_vector
 
-        Fisher_matrix = parallel_map(Fisher_matrix_row, self.all_params_list)
+        Fisher_matrix = parallel_map(Fisher_matrix_row, np.arange(self.n_all_params), method="alt")
 
-        return np.array(Fisher_matrix)
+        result = np.zeros((self.n_all_params, self.n_all_params))
+
+        for i in range(self.n_all_params):
+            result[i, i:] = Fisher_matrix[i]
+            result[i:, i] = Fisher_matrix[i]
+
+        return result
     
     def all_params_list(self):
         params = []
@@ -167,8 +169,7 @@ class FisherInformation():
 
     def calculation_module(self, order=0, left_type=True, field1_ind=0, param1_ind=0, field2_ind=0, param2_ind=0):
         if order == 0:
-            M = self.operator(self.SED_all, self.SED_all)
-            result = M - M @ (self.C_aux @ M)
+            result = self.M - self.M @ (self.C_aux @ self.M)
         elif order == 2:
             sed_partial_1 = self.generate_partial_derivative_SED_all(field1_ind, param1_ind)
             sed_partial_2 = self.generate_partial_derivative_SED_all(field2_ind, param2_ind)
@@ -177,15 +178,14 @@ class FisherInformation():
             M3 = self.operator(self.SED_all, sed_partial_2)
             result = result - M2 @ (self.C_aux @ M3)
         elif order == 1:
-            M = self.operator(self.SED_all, self.SED_all)
             if left_type:
                 sed_partial = self.generate_partial_derivative_SED_all(field1_ind, param1_ind)
                 M1 = self.operator(sed_partial, self.SED_all)
-                result = M1 - M1 @ (self.C_aux @ M)
+                result = M1 - M1 @ (self.C_aux @ self.M)
             else:
                 sed_partial = self.generate_partial_derivative_SED_all(field2_ind, param2_ind)
                 M1 = self.operator(self.SED_all, sed_partial)
-                result = M1 - M @ (self.C_aux @ M1)
+                result = M1 - self.M @ (self.C_aux @ M1)
         else:
             raise ValueError("The derivative order of the calculation module is wrong.")
 
