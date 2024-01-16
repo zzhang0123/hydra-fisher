@@ -21,7 +21,7 @@ class FisherInformation():
         self.sorted_filenames = fu.get_sorted_filenames(directory, pattern, get_path=True)
 
         self.SED_all = np.array([APS_obj.SED for APS_obj in APS_obj_list])
-        C_ell_all = np.array([0.5 * APS_obj.angular_covariance(ellm) for APS_obj in APS_obj_list]).flatten() # 0.5 factor accounts for the real/imag parts of the covariance
+        C_ell_all = np.array([0.5 * APS_obj.angular_covariance(ell) for APS_obj in APS_obj_list]).flatten() # 0.5 factor accounts for the real/imag parts of the covariance
 
         self.M = self.operator(self.SED_all, self.SED_all)
         self.C_aux = np.linalg.inv(np.diag(1/C_ell_all) + self.M) 
@@ -192,7 +192,7 @@ class FisherInformation():
 
         return result_matrix
     
-    
+
 
 class BaseFisherMatrix():
     def __init__(self, data_covariance_class_instance, *args):
