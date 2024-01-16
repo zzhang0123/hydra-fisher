@@ -30,6 +30,13 @@ class FisherInformation():
         self.all_params_list = self.all_params_list()
         self.n_all_params = len(self.all_params_list)
 
+        if rank == 0:
+            print("The number of fields is %d. \n" % self.n_fields)
+            print("The number of frequencies is %d. \n" % self.n_freqs)
+            print("The number of parameters is %d.\n" % self.n_all_params)
+            print("The number of XtX matrices is %d.\n" % len(self.sorted_filenames))
+            print("Fisher Information object initialized. \n")
+
     def generate_partial_derivative_SED_all(self, i, j):
         """
         i: the index of the field
@@ -109,15 +116,19 @@ class FisherInformation():
     @fu.myTiming_rank0
     def F_alpha_beta(self, field1, param1, field2, param2):
         if param1<=1 and param2<=1:
-            return self.F_alpha_beta_aa(field1, param1, field2, param2)
+            result = self.F_alpha_beta_aa(field1, param1, field2, param2)
         elif param1>1 and param2>1:
-            return self.F_alpha_beta_ff(field1, param1 - 2, field2, param2 - 2)
+            result = self.F_alpha_beta_ff(field1, param1 - 2, field2, param2 - 2)
         elif param1<=1 and param2>1:
-            return self.F_alpha_beta_af(field1, param1, field2, param2 - 2)
+            result = self.F_alpha_beta_af(field1, param1, field2, param2 - 2)
         elif param1>1 and param2<=1:
-            return self.F_alpha_beta_af(field2, param2, field1, param1 - 2)
+            result = self.F_alpha_beta_af(field2, param2, field1, param1 - 2)
         else:
             raise ValueError("The parameter indices are wrong.")
+        
+        print("Fisher matrix element calculated, which is %f. at field1 = %d, param1 = %d, field2 = %d, param2 = %d. \n" % (result, field1, param1, field2, param2))
+
+        return result
     
     def parallel_Fisher_calculation(self):
         """
