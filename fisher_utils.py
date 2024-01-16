@@ -120,7 +120,7 @@ def save_array_to_directory(array, directory, filename):
     return
 
 
-def get_sorted_filenames(directory, pattern):
+def get_sorted_filenames(directory, pattern, get_path=False):
     # Construct the joined pattern to match files
     # pattern = 'response_sh_*.npy' or 'response_sh_ellm_*.npy' or ...
     join_pattern = os.path.join(directory, pattern)
@@ -142,7 +142,10 @@ def get_sorted_filenames(directory, pattern):
     # Extract only the filenames
     sorted_filenames = [os.path.basename(f) for f in sorted_files]
 
-    return sorted_filenames
+    if get_path:
+        return sorted_files
+    else:
+        return sorted_filenames
 
 
 def extract_freqs(file_path):

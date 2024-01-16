@@ -1,5 +1,6 @@
 import numpy as np
 import fisher_utils as fu
+from scipy.optimize import minimize
 
 
 ###################################################################################################
@@ -14,28 +15,44 @@ import fisher_utils as fu
 
 
 ###################################################################################################
-# Angular power spectrum classes
 
-class BaseAPS(object):
-    nu_pivot = 130.0
+# Basic class: spatical part of the angular power spectrum
+
+class AngularStructure(object):
     l_pivot = 1000.0
 
     def angular_covariance(self, ell):
         return self.A*(ell / self.l_pivot)**(self.alpha)
     
+    def angular_covar_alpha_derivative(self, ell):
+        return self.A*(ell / self.l_pivot)**(self.alpha) * np.log(ell / self.l_pivot)
+
+    def angular_covar_A_derivative(self, ell):
+        return (ell / self.l_pivot)**(self.alpha)
+
+# Angular power spectrum classes: C_l^alpha, beta, zeta 
+
+class BaseAPS(AngularStructure):
+    nu_pivot = 130.0
+    
     def frequency_covariance(self, nu1, nu2):
         return (nu1*nu2/self.nu_pivot**2)**(self.beta) * np.exp( -0.5 * (np.log(nu1/nu2) / self.zeta)**2)
+    
+    def log_frequency_covariance(self, nu1, nu2):
+        """
+        x = log(nu/nu_pivot)
+        """
+        x1 = np.log(nu1/self.nu_pivot)
+        x2 = np.log(nu2/self.nu_pivot)
+        return self.beta * (x1+x2) - (x1-x2)**2 / (2 * self.zeta**2)
+    
+    def log_freq_cov_matrix(self, freqs):
+        return fu.calculate_function_values(freqs, freqs, self.log_frequency_covariance)
     
     def angular_powerspectrum(self, ell, nu1, nu2):
         frequency_part = fu.calculate_function_values(nu1, nu2, self.frequency_covariance)
         angular_part = self.angular_covariance(ell)
         return angular_part[:, np.newaxis, np.newaxis] * frequency_part
-    
-    def angular_covar_alpha_derivative(self, ell):
-        return self.A*(ell / self.l_pivot)**(self.alpha) * np.log(ell / self.l_pivot)
-    
-    def angular_covar_A_derivative(self, ell):
-        return (ell / self.l_pivot)**(self.alpha)
     
     def freq_covar_beta_derivative(self, nu1, nu2):
         return np.log(nu1*nu2/self.nu_pivot**2) * self.frequency_covariance(nu1, nu2)
@@ -76,17 +93,17 @@ class GalacticSynchrotron(BaseAPS):
 
 class ExtragalacticPointSource(BaseAPS):
     """
-    Reference: Mario G. Santos (2015)
+    Reference: Mario G. Santos (2005)
     Units: K^2
     """
-    A = 5.70e-5
+    A = 5.70e-5 
     alpha = -1.1
     beta = -2.07
     zeta = 1.0
 
 class ExtragalacticFreeFree(BaseAPS):
     """
-    Reference: Mario G. Santos (2015)
+    Reference: Mario G. Santos (2005)
     Units: K^2
     """
     A = 1.40e-8
@@ -96,13 +113,24 @@ class ExtragalacticFreeFree(BaseAPS):
 
 class GalacticFreeFree(BaseAPS):
     """
-    Reference: Mario G. Santos (2015)
+    Reference: Mario G. Santos (2005)
     Units: K^2
     """
     A = 8.80e-8
     alpha = -3.0
     beta = -2.15
     zeta = 35.0
+
+class ExtragalacticBackground(BaseAPS):
+    """
+    Reference: 
+    Units: K^2
+    """
+    A = 3.00e-4
+    alpha = -2.66
+    beta = -2.10
+    zeta = 1.0
+
 
 class CustomizeAPS(BaseAPS):
     def __init__(self, A, alpha, beta, zeta):
@@ -112,128 +140,74 @@ class CustomizeAPS(BaseAPS):
         self.zeta = zeta
 
 
-
 ###################################################################################################
-# Data space covariance class
-    
-
-class DataSpaceCovariance():
-    def __init__(self, ell, m, vis, freqs, cross_only=True, one_way_baseline=False, noise_scale=1e-3, minimum_ell=10):
-         # vis.shape=(NFREQS, NTIMES, NANTS, NANTS, NSRCS)
-        self.n_SH_modes = ell.size
-        self.noise_scale = noise_scale
-        self.ell = ell
-        self.m = m
-        self.freqs = freqs
-        self.vis = self.vis_response_mask(vis, cross_only=cross_only, one_way_baseline=one_way_baseline, minimum_ell=minimum_ell)
-        # self.vis.shape=(NFREQS, NTIMES*NBASELINES, NLMS,2)
-        shape = self.vis.shape
-        self.n_real_dof = shape[0] * shape[1] * shape[3]
-
-    @fu.myTiming
-    def __call__(self, APS_function):
-        cov = 0.5 * APS_function(self.ell, self.freqs, self.freqs)
-        result = np.einsum('aslm, lab, btln -> asmbtn', self.vis, cov, self.vis)
-        return result.reshape(self.n_real_dof, self.n_real_dof)
-
-
-    @fu.complex_to_real_array_decorator
-    def vis_response_mask(self, response_matr, cross_only=True, one_way_baseline=False, minimum_ell = 10):
-
-        shape = response_matr.shape
-        assert shape[2] == shape[3], "Data must have the same dimension in the two antenna axes"
-        assert shape[-1] == 2*self.n_SH_modes, "Data must have the same dimension as twice the number of SH modes"
+# Another augular power spectrum class (with universal spectral structure)
         
-        # Create a mask for the baselines
-        if one_way_baseline:
-            # Create an upper triangular mask for the two antenna axes
-            if cross_only:
-                mask = np.triu(np.ones((shape[2], shape[3]), dtype=bool), 1)
-            else:
-                mask = np.triu(np.ones((shape[2], shape[3]), dtype=bool), 0)
+class Universal_SED(AngularStructure):
+
+    def __init__(self, freqs,  aps_class_obj, order=3):
+        self.A = aps_class_obj.A
+        self.alpha = aps_class_obj.alpha
+        self.n_beta = order
+        self.nu_pivot = aps_class_obj.nu_pivot
+        self.fit_polynomial(freqs, aps_class_obj, order)
+        self.generate_SED_derivatives(freqs)
+
+    def log_freq(self, nu, nu_pivot=130.0):
+        return np.log(nu/nu_pivot)
+
+    def polynomial_freq_covariance(self, params, x):
+        """"
+        x = log(nu/nu_pivot)
+        SED model function: 
+            f(x) = exp( x * beta(x) ) 
+                 = exp( x * beta0 + x**2 * beta1 + x**3 * beta2 + ...)   -- Tylor expansion
+        Logrithm of frequency-frequency covariance), the poloynomial function of x = log(nu/nu_pivot):
+            d(x_i, x_j) = sum_k params[k] * (x_i**(k+1) + x_j**(k+1))
+        """
+        var1_grid, var2_grid = np.meshgrid(x, x, indexing='ij')
+        aux = [params[k] * (var1_grid**(k+1) + var2_grid**(k+1)) for k in range(len(params))]
+        return np.array(aux).sum(axis=0)
+
+    def fit_polynomial(self, freqs, aps_obj, order):
+
+        def loss_function(params, x, ref_data):
+            predicted = self.polynomial_freq_covariance(params, x)
+            return np.sum((predicted - ref_data)**2)
+
+        x = self.log_freq(freqs, aps_obj.nu_pivot)
+        y = aps_obj.log_freq_cov_matrix(freqs)
+    
+        initial_params = np.ones(order)  # Initial guess for coefficients
+        initial_params[0] = aps_obj.beta
+        result = minimize(loss_function, initial_params, args=(x, y), method='BFGS')
+
+        if result.success:
+            fitted_params = result.x
+            self.betas = fitted_params # shape: (n_beta,)
+            return 
         else:
-            if cross_only:
-                mask = np.ones((shape[2], shape[3]), dtype=bool)
-                mask[np.diag_indices(shape[2])] = False
-            else:
-                mask = np.ones((shape[2], shape[3]), dtype=bool)
-        # Get the indices of the unmasked baselines
-        self.ants_pair_indices = np.argwhere(mask)
-        self.n_baselines = self.ants_pair_indices.shape[0]
-
-
-        # Apply masks to the data  
-
-        # Apply the baseline mask to the data, and reshape it to have less dimensions
-        result = response_matr[:, :, mask, :].reshape(shape[0], shape[1]*self.n_baselines, -1)
-              
-        # Mask the SH modes to avoid the ones corresponding to the imaginary part of the monopole.
-        useful_modes = np.concatenate( (np.arange(self.n_SH_modes), self.n_SH_modes + np.where(self.m>0)[0]) )
-        ell = np.append(self.ell, self.ell[np.where(self.m>0)])
-        result = result[..., useful_modes]
-        # Mask the SH modes whose ell is greater than the minimum_ell
-        result = result[..., np.where(ell>=minimum_ell)[0]]
-
-        # Update the ell and m arrays
-        self.ell = ell[np.where(ell>=minimum_ell)]
-        self.m = np.append(self.m, self.m[np.where(self.m>0)])[np.where(ell>=minimum_ell)]
-
-        return result
+            raise ValueError("Fitting failed.")
     
-    def noise_covariance(self):
-        return self.noise_scale**2 * np.eye(self.n_real_dof)
-
-
-###################################################################################################
-# Fisher matrix class
-
-class FisherMatrix():
-    def __init__(self, data_covariance_class_instance, *args):
-        self.data_covariance_obj = data_covariance_class_instance
-        self.ags_classes = args
-        # self.total_APS_function = self.sum_functions_inputs(args)
-        self.n_params = 4 * len(args)
-        Sigma = self.data_covariance_obj(self.sum_aps_inputs) + self.data_covariance_obj.noise_covariance()
-        self.Sigma_inv = np.linalg.inv(Sigma)
+    def SED_function(self, freqs):
+        xs = self.log_freq(freqs, self.nu_pivot)
+        params = self.betas
+        aux = [params[k] * xs**(k+1)  for k in range(len(params))]
+        log_result = np.array(aux).sum(axis=0)
+        self.SED = np.exp(log_result)
+        return self.SED  # shape: (n_freqs,)
     
-    def sum_functions_inputs(self, *args):
-        def sum_func(*inputs):
-            return sum(APSclass.angular_powerspectrum(*inputs) for APSclass in args)
-        return sum_func
+    def generate_SED_derivatives(self, freqs):
+        aux = self.SED_function(freqs)
+        xs = self.log_freq(freqs, self.nu_pivot)
+        result = np.zeros((len(self.betas), len(freqs)))
+
+        for k in range(len(self.betas)):
+            result[k] = aux * xs**(k+1)
+
+        self.SED_derivatives = result  # shape: (n_beta, n_freqs)
+        return 
     
-    def sum_aps_inputs(self, *inputs):
-        result = 0
-        for APSclass in self.ags_classes:
-            result += APSclass.angular_powerspectrum(*inputs)
-        return result
-    
-    def derivative_func_list(self):
-        func_list = []
-        for obj in self.ags_classes:
-            for func in [obj.aps_A_derivative, 
-                         obj.aps_alpha_derivative, 
-                         obj.aps_beta_derivative, 
-                         obj.aps_zeta_derivative]:
-                func_list.append(func)
-        return func_list
-
-    @fu.myTiming
-    def Fisher_matrix(self):
-        partial_aps_list = self.derivative_func_list()
-        assert len(partial_aps_list) == self.n_params, "The number of partial derivatives is not equal to the number of parameters"
-
-        Fisher = np.zeros((self.n_params, self.n_params))
-
-        Sigma_derivatives_list = [self.Sigma_inv@self.data_covariance_obj(partial_aps) for partial_aps in partial_aps_list]
-
-        del self.data_covariance_obj
-        for i in range(self.n_params):
-            Fisher[i,i] = 0.5 * np.einsum('ab, ba ', Sigma_derivatives_list[i], Sigma_derivatives_list[i])
-            for j in range(i+1, self.n_params):
-                # Fisher[j, i] = Fisher[i,j] = self.Fisher_covar_part(self.Sigma_inv, Sigma_derivatives_list[i], Sigma_derivatives_list[j])
-                Fisher[j, i] = Fisher[i,j] = 0.5 * np.einsum('ab, ba ', Sigma_derivatives_list[i], Sigma_derivatives_list[j])
-        return Fisher
-        
 
 
 
