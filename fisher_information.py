@@ -138,7 +138,7 @@ class FisherInformation():
         """
         result = 0
         for i in range(self.n_freqs):
-            XtX = np.load(self.sorted_filenames[i])
+            XtX = np.load(self.sorted_filenames[i])[0]
             result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
         return result
 
