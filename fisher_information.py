@@ -1,7 +1,7 @@
 import numpy as np
 import fisher_utils as fu
 from mpiutils import *
-
+import gc
 
 ###################################################################################################
 # Fisher matrix class
@@ -23,8 +23,8 @@ class FisherInformation():
         self.SED_all = np.array([APS_obj.SED for APS_obj in APS_obj_list])
         C_ell_all = np.array([0.5 * APS_obj.angular_covariance(ell) for APS_obj in APS_obj_list]).flatten() # 0.5 factor accounts for the real/imag parts of the covariance
 
-        self.M = self.operator(self.SED_all, self.SED_all)
-        self.C_aux = np.linalg.inv(np.diag(1/C_ell_all) + self.M) 
+        M = self.operator(self.SED_all, self.SED_all)
+        self.C_aux = np.linalg.inv(np.diag(1/C_ell_all) + M) 
         self.C_ell_all = np.diag(C_ell_all)
 
         self.all_params_list = self.all_params_list()
@@ -86,17 +86,27 @@ class FisherInformation():
         Both parameters are SED (frequency/spectral) parameters.
         """
         aux_0 = self.calculation_module() @ self.C_ell_all
-        aux_f1_1_l = self.calculation_module(order=1, left_type=True, field1_ind=field1_index, param1_ind=parameter1_index) @ self.C_ell_all
-        aux_f1_1_r = self.calculation_module(order=1, left_type=False, field2_ind=field1_index, param2_ind=parameter1_index) @ self.C_ell_all
-        aux_f2_1_l = self.calculation_module(order=1, left_type=True, field1_ind=field2_index, param1_ind=parameter2_index) @ self.C_ell_all
-        aux_f2_1_r = self.calculation_module(order=1, left_type=False, field2_ind=field2_index, param2_ind=parameter2_index) @ self.C_ell_all
         aux_f1_f2 = self.calculation_module(order=2, field1_ind=field1_index, param1_ind=parameter1_index, field2_ind=field2_index, param2_ind=parameter2_index) @ self.C_ell_all
         aux_f2_f1 = self.calculation_module(order=2, field1_ind=field2_index, param1_ind=parameter2_index, field2_ind=field1_index, param2_ind=parameter1_index) @ self.C_ell_all
+        result = aux_0 @ aux_f1_f2 + aux_f2_f1 @ aux_0
+        del aux_0, aux_f1_f2, aux_f2_f1
+        gc.collect() # garbage collection, to avoid memory error
 
-        result = aux_f1_1_r @ aux_f2_1_r + aux_f2_1_l @ aux_f1_1_l + aux_0 @ aux_f1_f2 + aux_f2_f1 @ aux_0
+        aux_f1_1_l = self.calculation_module(order=1, left_type=True, field1_ind=field1_index, param1_ind=parameter1_index) @ self.C_ell_all
+        aux_f2_1_l = self.calculation_module(order=1, left_type=True, field1_ind=field2_index, param1_ind=parameter2_index) @ self.C_ell_all
+        result +=  aux_f2_1_l @ aux_f1_1_l
+        del aux_f1_1_l, aux_f2_1_l
+        gc.collect() # garbage collection, to avoid memory error
+        
+        aux_f1_1_r = self.calculation_module(order=1, left_type=False, field2_ind=field1_index, param2_ind=parameter1_index) @ self.C_ell_all
+        aux_f2_1_r = self.calculation_module(order=1, left_type=False, field2_ind=field2_index, param2_ind=parameter2_index) @ self.C_ell_all
+        result += aux_f1_1_r @ aux_f2_1_r
+        del aux_f1_1_r, aux_f2_1_r
+        gc.collect()
 
         return 0.5 * np.trace(result)
 
+    @fu.myTiming_rank0
     def F_alpha_beta(self, field1, param1, field2, param2):
         if param1<=1 and param2<=1:
             return self.F_alpha_beta_aa(field1, param1, field2, param2)
@@ -106,6 +116,8 @@ class FisherInformation():
             return self.F_alpha_beta_af(field1, param1, field2, param2 - 2)
         elif param1>1 and param2<=1:
             return self.F_alpha_beta_af(field2, param2, field1, param1 - 2)
+        else:
+            raise ValueError("The parameter indices are wrong.")
     
     def parallel_Fisher_calculation(self):
         """
@@ -138,29 +150,31 @@ class FisherInformation():
         """
         result = 0
         for i in range(self.n_freqs):
-            XtX = np.load(self.sorted_filenames[i])[0]
+            XtX = np.load(self.sorted_filenames[i])[0].real * 2 # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
             result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
         return result
 
     def calculation_module(self, order=0, left_type=True, field1_ind=0, param1_ind=0, field2_ind=0, param2_ind=0):
         if order == 0:
-            result = self.M - self.M @ (self.C_aux @ self.M)
+            M = self.operator(self.SED_all, self.SED_all)
+            result = M - M @ (self.C_aux @ M)
         elif order == 2:
             sed_partial_1 = self.generate_partial_derivative_SED_all(field1_ind, param1_ind)
             sed_partial_2 = self.generate_partial_derivative_SED_all(field2_ind, param2_ind)
-            M1 = self.operator(sed_partial_1, sed_partial_2)
+            result = self.operator(sed_partial_1, sed_partial_2)
             M2 = self.operator(sed_partial_1, self.SED_all)
             M3 = self.operator(self.SED_all, sed_partial_2)
-            result = M1 - M2 @ (self.C_aux @ M3)
+            result = result - M2 @ (self.C_aux @ M3)
         elif order == 1:
+            M = self.operator(self.SED_all, self.SED_all)
             if left_type:
                 sed_partial = self.generate_partial_derivative_SED_all(field1_ind, param1_ind)
                 M1 = self.operator(sed_partial, self.SED_all)
-                result = M1 - M1 @ (self.C_aux @ self.M)
+                result = M1 - M1 @ (self.C_aux @ M)
             else:
                 sed_partial = self.generate_partial_derivative_SED_all(field2_ind, param2_ind)
                 M1 = self.operator(self.SED_all, sed_partial)
-                result = M1 - self.M @ (self.C_aux @ M1)
+                result = M1 - M @ (self.C_aux @ M1)
         else:
             raise ValueError("The derivative order of the calculation module is wrong.")
 
