@@ -53,7 +53,7 @@ class FisherInformation():
         j: the index of the angular structure parameters, 
             j=0 -> A, j=1 -> alpha.
         """
-        aux = np.zeros((self.n_fields, self.n_freqs))
+        aux = np.zeros((self.n_fields, len(self.ell)))
         if j == 0:
             aux[i, :] = 0.5 * self.fields[i].angular_covar_A_derivative(self.ell)
         elif j == 1:
