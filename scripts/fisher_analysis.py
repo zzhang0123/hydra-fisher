@@ -8,7 +8,7 @@ from fisher_information import FisherInformation
 
 
 
-fs = np.load('sorted_freqs.npy')/1e6
+fs = np.load('/cosma/home/dp270/dc-zhan11/hydra-fisher/sorted_freqs.npy')/1e6
 
 ell = np.load('/cosma8/data/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/response_sh_ellm_0000.npy')[:,0]
 
