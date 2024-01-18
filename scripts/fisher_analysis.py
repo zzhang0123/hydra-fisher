@@ -22,7 +22,7 @@ Gal_FF = Universal_SED(fs, GalacticFreeFree(), n_betas)
 Gal_Sync = Universal_SED(fs, GalacticSynchrotron(), n_betas)
 Ext_FF = Universal_SED(fs, ExtragalacticFreeFree(), n_betas)
 Ext_point = Universal_SED(fs, ExtragalacticPointSource(), n_betas)
-Background = Universal_SED(fs, ExtragalacticBackground(), n_betas)
+Background = Universal_SED(fs, ExtragalacticBackground1(), n_betas)
 
 foregrounds = [Gal_FF, 
                Gal_Sync, 

@@ -121,15 +121,25 @@ class GalacticFreeFree(BaseAPS):
     beta = -2.15
     zeta = 35.0
 
-class ExtragalacticBackground(BaseAPS):
+class ExtragalacticBackground1(BaseAPS):
     """
     Reference: 
     Units: K^2
     """
     A = 3.00e-4
-    alpha = -2.66
-    beta = -2.10
-    zeta = 1.0
+    alpha = -2.40
+    beta = -2.66
+    zeta = 4.0
+
+class ExtragalacticBackground2(BaseAPS):
+    """
+    Reference: 
+    Units: K^2
+    """
+    A = 3.00e-4
+    alpha = 0
+    beta = -2.66
+    zeta = 30.0
 
 
 class CustomizeAPS(BaseAPS):

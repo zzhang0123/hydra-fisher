@@ -1,6 +1,7 @@
 import numpy as np
 import fisher_utils as fu
 from mpiutils import *
+import h5py
 
 
 ###################################################################################################
@@ -110,7 +111,8 @@ class FisherInformation():
 
 
     @fu.myTiming_rank0
-    def F_alpha_beta(self, field1, param1, field2, param2):
+    def F_alpha_beta(self, param_list):
+        field1, param1, field2, param2 = param_list
         if param1<=1 and param2<=1:
             result = self.F_alpha_beta_aa(field1, param1, field2, param2)
         elif param1>1 and param2>1:
@@ -125,8 +127,57 @@ class FisherInformation():
         print("Fisher matrix element calculated, which is %f. at field1 = %d, param1 = %d, field2 = %d, param2 = %d. \n" % (result, field1, param1, field2, param2))
 
         return result
-    
+
     def parallel_Fisher_calculation(self):
+        """
+        Calculate the upper right triangle Fisher matrix in parallel.
+        """
+        nparams = self.fields[0].n_beta + 2
+        result = np.zeros((self.n_fields, nparams, self.n_fields, nparams))
+
+        spatial_triangle = []
+        spatial_frequency = []
+        frequency_triangle = []
+        for f1 in range(self.n_fields):
+            for p1 in range(nparams):
+                row_index = f1 * nparams + p1
+                for f2 in range(self.n_fields):
+                    for p2 in range(nparams):
+                        column_index = f2 * nparams + p2
+                        if row_index <= column_index:
+                            if p1 <= 1 and p2 <= 1:
+                                spatial_triangle.append([f1, p1, f2, p2])
+                            elif p1 > 1 and p2 > 1:
+                                frequency_triangle.append([f1, p1, f2, p2])
+                            else:
+                                spatial_frequency.append([f1, p1, f2, p2])
+        
+        result[f1, p1, f2, p2] = self.F_alpha_beta(f1, p1, f2, p2)
+
+        Fisher_spatial = parallel_map(self.F_alpha_beta, spatial_triangle, method="alt")
+        Fisher_frequency = parallel_map(self.F_alpha_beta, frequency_triangle, method="alt")
+        Fisher_spatial_frequency = parallel_map(self.F_alpha_beta, spatial_frequency, method="alt")
+
+        barrier()
+
+        for i in range(len(spatial_triangle)):
+            f1, p1, f2, p2 = spatial_triangle[i]
+            result[f1, p1, f2, p2] = Fisher_spatial[i]
+            result[f2, p2, f1, p1] = Fisher_spatial[i]
+
+        for i in range(len(frequency_triangle)):
+            f1, p1, f2, p2 = frequency_triangle[i]
+            result[f1, p1, f2, p2] = Fisher_frequency[i]
+            result[f2, p2, f1, p1] = Fisher_frequency[i]
+
+        for i in range(len(spatial_frequency)):
+            f1, p1, f2, p2 = spatial_frequency[i]
+            result[f1, p1, f2, p2] = Fisher_spatial_frequency[i]
+            result[f2, p2, f1, p1] = Fisher_spatial_frequency[i]
+
+        return result
+
+    def parallel_Fisher_calculation_old_version(self):
         """
         Calculate the upper right triangle Fisher matrix in parallel.
         """
@@ -157,14 +208,21 @@ class FisherInformation():
                 params.append([field_ind, param_ind])
         return params
 
-    def operator(self, f1, f2):
+    def operator(self, f1, f2, hdf5 = True):
         """
         f1 and f2 are arrays of shape (n_fields, n_freqs).
         """
         result = 0
-        for i in range(self.n_freqs):
-            XtX = np.load(self.sorted_filenames[i])[0].real  # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
-            result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
+        if hdf5:
+            f = h5py.File('/cosma8/data/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/XtXresponse_sh.hdf5', 'r')
+            for i in range(self.n_freqs):
+                XtX = f[str(i)][:]
+                result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
+            f.close()
+        else:
+            for i in range(self.n_freqs):
+                XtX = np.load(self.sorted_filenames[i])[0].real  # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
+                result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
         return result
 
     def calculation_module(self, order=0, left_type=True, field1_ind=0, param1_ind=0, field2_ind=0, param2_ind=0):
