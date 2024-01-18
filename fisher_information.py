@@ -21,7 +21,7 @@ def trace_trick(M1, C1, M2, C2):
 # Another trick: Tr(M1 @ C1 @ M2 @ C2) = Tr(M2.T @ C1 @ M1.T @ C2)
 
 class FisherInformation():
-    def __init__(self, APS_obj_list, freqs, ell, directory, pattern):
+    def __init__(self, APS_obj_list, freqs, ell, directory):
         """"
         APS_obj_list: a list of (universal SED) APS classes
         freqs: a list of frequencies in MHz
@@ -32,7 +32,8 @@ class FisherInformation():
         self.n_freqs = len(freqs)
         self.n_fields = len(APS_obj_list)
         self.ell = ell
-        self.sorted_filenames = fu.get_sorted_filenames(directory, pattern, get_path=True)
+        self.directory = directory
+        # self.sorted_filenames = fu.get_sorted_filenames(directory, pattern, get_path=True)
 
         self.SED_all = np.array([APS_obj.SED for APS_obj in APS_obj_list])
         self.C_ell_all = np.array([0.5 * APS_obj.angular_covariance(ell) for APS_obj in APS_obj_list]).flatten() # 0.5 factor accounts for the real/imag parts of the covariance
@@ -47,7 +48,7 @@ class FisherInformation():
             print("The number of fields is %d. \n" % self.n_fields)
             print("The number of frequencies is %d. \n" % self.n_freqs)
             print("The number of parameters is %d.\n" % self.n_all_params)
-            print("The number of XtX matrices is %d.\n" % len(self.sorted_filenames))
+            # print("The number of XtX matrices is %d.\n" % len(self.sorted_filenames))
             print("Fisher Information object initialized. \n")
 
     def generate_partial_derivative_SED_all(self, i, j):
@@ -152,7 +153,6 @@ class FisherInformation():
                             else:
                                 spatial_frequency.append([f1, p1, f2, p2])
         
-        result[f1, p1, f2, p2] = self.F_alpha_beta(f1, p1, f2, p2)
 
         Fisher_spatial = parallel_map(self.F_alpha_beta, spatial_triangle, method="alt")
         Fisher_frequency = parallel_map(self.F_alpha_beta, frequency_triangle, method="alt")
@@ -208,21 +208,23 @@ class FisherInformation():
                 params.append([field_ind, param_ind])
         return params
 
-    def operator(self, f1, f2, hdf5 = True):
+    def operator(self, f1, f2):
+        result = 0
+        f = h5py.File(self.directory, 'r', driver='mpio', comm=world)
+        for i in range(self.n_freqs):
+            XtX = f[str(i)][:]
+            result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
+        f.close()
+        return result
+
+    def operator_old(self, f1, f2):
         """
         f1 and f2 are arrays of shape (n_fields, n_freqs).
         """
         result = 0
-        if hdf5:
-            f = h5py.File('/cosma8/data/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/XtXresponse_sh.hdf5', 'r')
-            for i in range(self.n_freqs):
-                XtX = f[str(i)][:]
-                result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
-            f.close()
-        else:
-            for i in range(self.n_freqs):
-                XtX = np.load(self.sorted_filenames[i])[0].real  # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
-                result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
+        #for i in range(self.n_freqs):
+        #    XtX = np.load(self.sorted_filenames[i])[0].real  # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
+        #    result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
         return result
 
     def calculation_module(self, order=0, left_type=True, field1_ind=0, param1_ind=0, field2_ind=0, param2_ind=0):
