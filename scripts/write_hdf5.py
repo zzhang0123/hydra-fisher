@@ -23,7 +23,7 @@ local_keys = partition_list_mpi(ind_list)
 
 file_path = os.path.join(directory, 'XtXresponse_sh.hdf5')
 
-with h5py.File(file_path, 'a', driver='mpio', comm=world) as file:
+with h5py.File(file_path, 'w', driver='mpio', comm=world) as file:
     dsets = [file.create_dataset(str(j), shape=(nmodes, nmodes), dtype='float') for j in range(nfreq)]
     barrier()
     for k in range(len(local_files)):
