@@ -115,7 +115,7 @@ class DataProcessing():
         data = data.reshape(shape[0], times.size, -1, self.NLMS*2) # data.shape=(NFREQS, N_times, NBASLINES, NLMS*2), data type=complex
         return data    
 
-    @fu.complex_to_real_array_decorator
+    @fu.complex_to_real_decorator
     def vis_response_mask(self, response_matr, cross_only=True, one_way_baseline=True, minimum_ell = 1):
         """
         Input: response_matr.shape=(NFREQS, NTIMES, NANTS, NANTS, NLMS*2), data type=complex
