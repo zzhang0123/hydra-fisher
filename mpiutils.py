@@ -3,6 +3,7 @@ This module is adapted from https://github.com/radiocosmology/caput/blob/master/
 """
 import numpy as np
 import logging
+import h5py
 
 rank = 0
 size = 1
@@ -172,3 +173,14 @@ def parallel_jobs_no_gather_no_return(func, glist, method="con", comm=_comm):
 def barrier(comm=_comm):
     if comm is not None and comm.size > 1:
         comm.Barrier()
+
+
+def save_to_hdf5_parallel(file_path, local_data, local_key):
+
+    # Open the HDF5 file in parallel
+    with h5py.File(file_path, 'a', driver='mpio', comm=_comm) as file:
+        # Create a dataset with collective mode (MPI)
+        dataset = file.create_dataset(local_key, data=local_data, chunks=True)
+
+    # Ensure all processes have finished writing before proceeding
+    barrier()
