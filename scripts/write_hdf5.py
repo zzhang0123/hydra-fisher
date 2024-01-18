@@ -27,7 +27,7 @@ with h5py.File(file_path, 'w', driver='mpio', comm=world) as file:
     dsets = [file.create_dataset(str(j), shape=(nmodes, nmodes), dtype='float') for j in range(nfreq)]
     barrier()
     for k in range(len(local_files)):
-        dsets[str(local_keys[k])][...] = np.load(local_files[k])  
+        dsets[local_keys[k]][...] = np.load(local_files[k])  
 
 barrier()
 
