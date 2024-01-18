@@ -163,7 +163,7 @@ class FisherInformation():
         """
         result = 0
         for i in range(self.n_freqs):
-            XtX = np.load(self.sorted_filenames[i])[0].real * 2 # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
+            XtX = np.load(self.sorted_filenames[i])[0].real  # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
             result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
         return result
 

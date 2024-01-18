@@ -13,7 +13,7 @@ import h5py
 directory = "/cosma8/data/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/"
 pattern = "XtXresponse_sh_*.npy"
 
-operator_path_list = get_sorted_filenames(directory, pattern)
+operator_path_list = get_sorted_filenames(directory, pattern, get_path=True)
 nfreq = len(operator_path_list)
 nmodes = 8280
 ind_list = np.arange(nfreq)
