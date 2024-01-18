@@ -21,7 +21,7 @@ def trace_trick(M1, C1, M2, C2):
 # Another trick: Tr(M1 @ C1 @ M2 @ C2) = Tr(M2.T @ C1 @ M1.T @ C2)
 
 class FisherInformation():
-    def __init__(self, APS_obj_list, freqs, ell, directory):
+    def __init__(self, APS_obj_list, freqs, ell, directory, npy=False, pattern='XtXresponse_sh_*.npy'):
         """"
         APS_obj_list: a list of (universal SED) APS classes
         freqs: a list of frequencies in MHz
@@ -32,8 +32,11 @@ class FisherInformation():
         self.n_freqs = len(freqs)
         self.n_fields = len(APS_obj_list)
         self.ell = ell
-        self.directory = directory
-        # self.sorted_filenames = fu.get_sorted_filenames(directory, pattern, get_path=True)
+    
+        if npy:
+            self.sorted_filenames = fu.get_sorted_filenames(directory, pattern, get_path=True)
+        else:
+            self.directory = directory
 
         self.SED_all = np.array([APS_obj.SED for APS_obj in APS_obj_list])
         self.C_ell_all = np.array([0.5 * APS_obj.angular_covariance(ell) for APS_obj in APS_obj_list]).flatten() # 0.5 factor accounts for the real/imag parts of the covariance
@@ -208,23 +211,21 @@ class FisherInformation():
                 params.append([field_ind, param_ind])
         return params
 
-    def operator(self, f1, f2):
-        result = 0
-        f = h5py.File(self.directory, 'r', driver='mpio', comm=world)
-        for i in range(self.n_freqs):
-            XtX = f[str(i)][:]
-            result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
-        f.close()
-        return result
-
-    def operator_old(self, f1, f2):
+    def operator(self, f1, f2, npy=True):
         """
         f1 and f2 are arrays of shape (n_fields, n_freqs).
         """
         result = 0
-        #for i in range(self.n_freqs):
-        #    XtX = np.load(self.sorted_filenames[i])[0].real  # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
-        #    result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
+        if npy:
+            for i in range(self.n_freqs):
+                XtX = np.load(self.sorted_filenames[i])[0].real  # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
+                result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
+        else:
+            f = h5py.File(self.directory, 'r', driver='mpio', comm=world)
+            for i in range(self.n_freqs):
+                XtX = f[str(i)][:]
+                result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
+            f.close()
         return result
 
     def calculation_module(self, order=0, left_type=True, field1_ind=0, param1_ind=0, field2_ind=0, param2_ind=0):
@@ -321,7 +322,7 @@ class BaseFisherMatrix():
 
         del self.data_covariance_obj
         for i in range(self.n_params):
-            Fisher[i,i] = 0.5 * np.einsum('ab, ba ', Sigma_derivatives_list[i], Sigma_derivatives_list[i])
+            Fisher[i,i] = 0.5 * np.einsum('ab, ba', Sigma_derivatives_list[i], Sigma_derivatives_list[i])
             for j in range(i+1, self.n_params):
                 # Fisher[j, i] = Fisher[i,j] = self.Fisher_covar_part(self.Sigma_inv, Sigma_derivatives_list[i], Sigma_derivatives_list[j])
                 Fisher[j, i] = Fisher[i,j] = 0.5 * np.einsum('ab, ba ', Sigma_derivatives_list[i], Sigma_derivatives_list[j])
