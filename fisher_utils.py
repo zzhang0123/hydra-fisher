@@ -60,7 +60,7 @@ def myTiming_rank0(func):
     return(decorated_function)
 
 # Define the decorator
-def complex_to_real_array_decorator(func):
+def complex_to_real_decorator(func):
     """
     A decorator that converts a function that returns a complex array into a function that returns a real array.
     """

@@ -80,7 +80,11 @@ class DataProcessing():
                 vis_time = self.ellm_filter(vis_time)
                 # vis_time.shape=(NFREQS, NBASELINES, NLMS*2 - Nmodes_to_mask, 2), data type=float
                 for freq in range(self.NFREQS):
-                    XtX[freq] += np.einsum('alr, amr -> lm', vis_time[freq]/noise_scale[freq, i], vis_time[freq]/noise_scale[freq, i], optimize=True)
+                    if noise_scale is None:
+                        XtX[freq] += np.einsum('alr, amr -> lm', vis_time[freq], vis_time[freq], optimize=True)
+                    else:
+                        noise = noise_scale[freq, i]/np.sqrt(2)
+                        XtX[freq] += np.einsum('alr, amr -> lm', vis_time[freq]/noise, vis_time[freq]/noise, optimize=True)
             XtX = np.array(XtX) # XtX.shape=(NFREQS, NLMS*2 - Nmodes_to_mask, NLMS*2 - Nmodes_to_mask), data type=float
             fu.save_array_to_directory(XtX , save_directory, 'XtX'+vis_filename)
         else:
@@ -206,7 +210,7 @@ class DataProcessing():
         result = response_matr[:, :, mask, :].reshape(shape[0], shape[1], self.n_baselines, -1) # shape=(NFREQS, NTIMES, NBASELINES, NLMS*2)
         return result
     
-    @fu.complex_to_real_array_decorator
+    @fu.complex_to_real_decorator
     def ellm_filter(self, response_matr):
         """
         This is to be applied after the baseline_filter function.
@@ -214,6 +218,7 @@ class DataProcessing():
         Input: response_matr.shape=(NFREQS, NTIMES, NBASELINES, NLMS*2), data type=complex
 
         Output: result.shape=(NFREQS, NTIMES, NBASELINES, NLMS*2 - Nmodes_to_mask), data type=complex
+        (With the decorater "complex_to_real_decorator", the output is a real array.)
         """
         result = response_matr[..., self.mmodes_mask][..., self.lmodes_mask] 
         return result

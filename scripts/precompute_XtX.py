@@ -26,7 +26,9 @@ save_directory = "/cosma8/data/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside
 
 noise = np.load("/cosma8/data/dp270/dc-zhan11/auto_response_sh_polybeam_lmax90_nside64/auto_correlation_0000.npy")[:,:,0]
 
-noise = np.sqrt(noise**2 / (40 * 166000))
+noise = np.sqrt(noise.real**2 / (40 * 166000))
+
+assert noise.dtype == np.float64, "The noise array is not float64."
 
 for i in range(len(vis_file_local_list)):
     vis_file_local = vis_file_local_list[i]
