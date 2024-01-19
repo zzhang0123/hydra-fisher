@@ -32,6 +32,7 @@ class FisherInformation():
         self.n_freqs = len(freqs)
         self.n_fields = len(APS_obj_list)
         self.ell = ell
+        self.npy = npy
     
         if npy:
             self.sorted_filenames = fu.get_sorted_filenames(directory, pattern, get_path=True)
@@ -211,14 +212,14 @@ class FisherInformation():
                 params.append([field_ind, param_ind])
         return params
 
-    def operator(self, f1, f2, npy=True):
+    def operator(self, f1, f2):
         """
         f1 and f2 are arrays of shape (n_fields, n_freqs).
         """
         result = 0
-        if npy:
+        if self.npy:
             for i in range(self.n_freqs):
-                XtX = np.load(self.sorted_filenames[i])[0].real  # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
+                XtX = np.load(self.sorted_filenames[i])[0]  # 2 factor accounts for account for a mistake I made when rescale X with noise scales (the real/imag parts) 
                 result += self.generate_block_matrix(XtX, f1[:, i], f2[:, i])
         else:
             f = h5py.File(self.directory, 'r', driver='mpio', comm=world)
