@@ -18,6 +18,27 @@ from scipy.optimize import minimize
 
 # Basic class: spatical part of the angular power spectrum
 
+class AngularStructureV2(object):
+    l_pivot = 1000.0
+
+    def angular_covariance(self, ell, ell_c = 10):
+        if ell < ell_c:
+            return self.A*(10 / self.l_pivot)**(self.alpha)
+        else:
+            return self.A*(ell / self.l_pivot)**(self.alpha)
+    
+    def angular_covar_alpha_derivative(self, ell, ell_c = 10):
+        if ell < ell_c:
+            return 0
+        else:           
+            return self.A*(ell / self.l_pivot)**(self.alpha) * np.log(ell / self.l_pivot)
+
+    def angular_covar_A_derivative(self, ell, ell_c = 10):
+        if ell < ell_c:
+            return 0
+        else:
+            return (ell / self.l_pivot)**(self.alpha)
+
 class AngularStructure(object):
     l_pivot = 1000.0
 
