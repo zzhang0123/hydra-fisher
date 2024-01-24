@@ -179,6 +179,7 @@ class DataProcessing():
     
     def baseline_filter(self, response_matr, cross_only=True, one_way_baseline=True):
         """
+        !!! COUNT REWEIGHT BASELINE DENSITY
         Input: response_matr.shape=(NFREQS, NTIMES, NANTS, NANTS, NLMS*2), data type=complex
 
         Output: result.shape=(NFREQS, NTIMES, NBASELINES, NLMS*2), data type=complex

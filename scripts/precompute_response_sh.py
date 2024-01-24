@@ -61,7 +61,8 @@ if myid == 0:
     print("(Workers finished loading metadata.)")
 
 # Get freqs, lsts, ants etc.
-freqs = np.unique(uvd.freq_array)
+# freqs = np.unique(uvd.freq_array)
+freqs = np.load('/cosma/home/dp270/dc-zhan11/hydra-fisher/sorted_freqs.npy')
 lsts = np.unique(uvd.lst_array)
 antpos, antnums = uvd.get_ENU_antpos(center=False, pick_data_ants=True)
 ants = {}
@@ -70,6 +71,7 @@ ants = {}
 ants[0]=antpos[0] 
 
 radian_per_hour = 2*np.pi/24
+
 start_time = radian_per_hour * 4     
 end_time = radian_per_hour * 6.25  
 #step_time = radian_per_hour * (10.7 / 3600)
@@ -142,7 +144,7 @@ vis = hydra.noise_simulator.simulate_vis_gsm_map(
                     use_feed="x",
                     multiprocess=False,
                     amplitude=1.
-                )
+                    )
 # vis shape (NAXES, NFEED, NFREQS, NTIMES, NANTS, NMODES)
 # (NFREQS, NTIMES, NANTS, NANTS, NMODES) if pol False
 print("(Worker %03d) Run took %5.1f min" % (myid, (time.time() - tstart)/60.))
