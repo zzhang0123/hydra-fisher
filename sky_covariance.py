@@ -18,27 +18,28 @@ from scipy.optimize import minimize
 
 # Basic class: spatical part of the angular power spectrum
 
-class AngularStructureV2(object):
+class AngularStructure(object):
     l_pivot = 1000.0
 
-    def angular_covariance(self, ell, ell_c = 10):
+    def angular_covariance(self, ell, ell_c = 8):
         if ell < ell_c:
-            return self.A*(10 / self.l_pivot)**(self.alpha)
+            return (np.e ** self.A)*(10 / self.l_pivot)**(self.alpha)
         else:
-            return self.A*(ell / self.l_pivot)**(self.alpha)
+            return (np.e ** self.A)*(ell / self.l_pivot)**(self.alpha)
     
     def angular_covar_alpha_derivative(self, ell, ell_c = 10):
         if ell < ell_c:
-            return 0
+            return (np.e ** self.A)*(ell_c / self.l_pivot)**(self.alpha) * np.log(ell_c / self.l_pivot)
         else:           
-            return self.A*(ell / self.l_pivot)**(self.alpha) * np.log(ell / self.l_pivot)
+            return (np.e ** self.A)*(ell / self.l_pivot)**(self.alpha) * np.log(ell / self.l_pivot)
 
     def angular_covar_A_derivative(self, ell, ell_c = 10):
         if ell < ell_c:
-            return 0
+            return (np.e ** self.A)*(ell_c / self.l_pivot)**(self.alpha)
         else:
-            return (ell / self.l_pivot)**(self.alpha)
+            return (np.e ** self.A)*(ell / self.l_pivot)**(self.alpha)
 
+"""
 class AngularStructure(object):
     l_pivot = 1000.0
 
@@ -50,6 +51,7 @@ class AngularStructure(object):
 
     def angular_covar_A_derivative(self, ell):
         return (ell / self.l_pivot)**(self.alpha)
+"""
 
 # Angular power spectrum classes: C_l^alpha, beta, zeta 
 
@@ -107,7 +109,8 @@ class GalacticSynchrotron(BaseAPS):
     Reference: Mario G. Santos (2005)
     Units: K^2
     """
-    A = 7.00e-4
+    #A = 7.00e-4
+    A = -7.264
     alpha = -2.40
     beta = -2.80
     zeta = 4.0
@@ -117,7 +120,8 @@ class ExtragalacticPointSource(BaseAPS):
     Reference: Mario G. Santos (2005)
     Units: K^2
     """
-    A = 5.70e-5 
+    #A = 5.70e-5 
+    A = -9.772
     alpha = -1.1
     beta = -2.07
     zeta = 1.0
@@ -127,7 +131,8 @@ class ExtragalacticFreeFree(BaseAPS):
     Reference: Mario G. Santos (2005)
     Units: K^2
     """
-    A = 1.40e-8
+    #A = 1.40e-8
+    A = -18.084
     alpha = -1.0
     beta = -2.10
     zeta = 35.0
@@ -137,7 +142,8 @@ class GalacticFreeFree(BaseAPS):
     Reference: Mario G. Santos (2005)
     Units: K^2
     """
-    A = 8.80e-8
+    #A = 8.80e-8
+    A = -16.246
     alpha = -3.0
     beta = -2.15
     zeta = 35.0
@@ -147,7 +153,8 @@ class ExtragalacticBackground1(BaseAPS):
     Reference: 
     Units: K^2
     """
-    A = 3.00e-4
+    #A = 3.00e-4
+    A = -8.112
     alpha = -2.40
     beta = -2.66
     zeta = 4.0
@@ -157,7 +164,8 @@ class ExtragalacticBackground2(BaseAPS):
     Reference: 
     Units: K^2
     """
-    A = 3.00e-4
+    #A = 3.00e-4
+    A = -8.112
     alpha = 0
     beta = -2.66
     zeta = 30.0

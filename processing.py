@@ -1,11 +1,12 @@
 import numpy as np
 import fisher_utils as fu
 import os
+from pyuvdata import UVData
 
 # Data preprocessing
 
 class DataProcessing():
-    def __init__(self, directory, cross_only=True, one_way_baseline=True, minimum_ell=1):
+    def __init__(self, directory, template, cross_only=True, one_way_baseline=True, minimum_ell=0, maximum_bln_length=95):
         """
         Input:
         directory: directory where the data files are stored
@@ -17,6 +18,25 @@ class DataProcessing():
         self.cross_only = cross_only
         self.one_way_baseline = one_way_baseline
         self.minimum_ell = minimum_ell
+        self.maximum_bln_length = maximum_bln_length
+
+        uvd = UVData()
+        uvd.read_uvh5(template, read_data=False)
+        antpos, antnums = uvd.get_ENU_antpos(center=False, pick_data_ants=True)
+        ants = {}
+        nants = len(antnums)
+        for i in range(nants):
+            ants[antnums[i]] = antpos[i]
+        self.ants = ants
+
+        # ant_ind_i, ant_ind_j = np.meshgrid(np.arange(nants), np.arange(nants), indexing='ij')
+
+        bln_vecs = np.zeros((nants, nants,3))
+        for i in range(nants):
+            for j in range(nants):
+                bln_vecs[i,j,:] = antpos[i,:] - antpos[j,:]
+
+        self.bln_length_array = np.sqrt(np.sum(bln_vecs**2,axis=-1)) # shape=(nants, nants)
 
 
     def __call__(self, 
@@ -66,7 +86,8 @@ class DataProcessing():
         
 
         # Apply baseline filter
-        vis = self.baseline_filter(vis, cross_only=self.cross_only, one_way_baseline=self.one_way_baseline)
+        vis = self.baseline_filter(vis, cross_only=self.cross_only, one_way_baseline=self.one_way_baseline, 
+                                   maximum_bln_length=self.maximum_bln_length)
         # shape=(NFREQS, NTIMES, NBASELINES, NLMS*2), data type=complex
 
         time_sequence = np.arange(start_time, end_time, step_time) - reference_time
@@ -177,9 +198,8 @@ class DataProcessing():
 
         return result
     
-    def baseline_filter(self, response_matr, cross_only=True, one_way_baseline=True):
+    def baseline_filter(self, response_matr, cross_only=True, one_way_baseline=True, minimum_bln_length=0., maximum_bln_length=np.inf):
         """
-        !!! COUNT REWEIGHT BASELINE DENSITY
         Input: response_matr.shape=(NFREQS, NTIMES, NANTS, NANTS, NLMS*2), data type=complex
 
         Output: result.shape=(NFREQS, NTIMES, NBASELINES, NLMS*2), data type=complex
@@ -188,7 +208,10 @@ class DataProcessing():
         assert shape[2] == shape[3], "Data must have the same dimension in the two antenna axes"
         assert shape[-1] == 2*self.NLMS, "Data must have the same dimension as twice the number of SH modes (response matrics to real and imaginary parts for each sky spherical mode)"
             
-            # Create a mask for the baselines
+        # filter the baselines with their lengths
+        mask_length = np.logical_and(self.bln_length_array >= minimum_bln_length, self.bln_length_array <= maximum_bln_length)
+
+        # Create the other mask for the baselines
         if one_way_baseline:
             # Create an upper triangular mask for the two antenna axes
             if cross_only:
@@ -202,13 +225,23 @@ class DataProcessing():
             else:
                 mask = np.ones((shape[2], shape[3]), dtype=bool)
         # Get the indices of the unmasked baselines
-        self.ants_pair_indices = np.argwhere(mask)
+        mask = np.logical_and(mask, mask_length)
+        self.ants_pair_indices = np.argwhere(mask) # shape=(NBASELINES, 2)
+
         self.n_baselines = self.ants_pair_indices.shape[0]
 
+        self.blns_length_masked = self.bln_length_array[mask]
         # Apply masks to the data  
 
+        hist, bin_edges = np.histogram(self.blns_length_masked, bins=20)
+        bin_indices = np.digitize(self.blns_length_masked, bins=bin_edges, right=True)
+        bin_counts = np.zeros(bin_indices.shape)
+        for i in range(bin_indices.size):
+            bin_counts[i] = np.sum(bin_indices==bin_indices[i])
+        weights = np.sqrt(bin_counts.max()/bin_counts)
         # Apply the baseline mask to the data
         result = response_matr[:, :, mask, :].reshape(shape[0], shape[1], self.n_baselines, -1) # shape=(NFREQS, NTIMES, NBASELINES, NLMS*2)
+        result = result * weights[np.newaxis, np.newaxis, :, np.newaxis] # shape=(NFREQS, NTIMES, NBASELINES, NLMS*2)
         return result
     
     @fu.complex_to_real_decorator

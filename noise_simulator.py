@@ -7,7 +7,7 @@ import warnings
 from astropy.constants import c
 from pyuvdata import UVBeam
 from typing import Optional, Sequence
-from vis_cpu import conversions
+from matvis import conversions
 import healpy as hp
 from multiprocessing import Pool, cpu_count
 import os, warnings, time
@@ -282,7 +282,7 @@ def vis_sim_per_source(
         v[:,~above_horizon] *= 0. # zero-out sources below the horizon
 
         # Compute visibilities using product of complex voltages (upper triangle).
-        # Input arrays have shape (Nax, Nfeed, [Nants], Nsrcs
+        # Input arrays have shape (Nax, Nfeed, Nants, Nsrcs
         v = A_s[:, :, beam_idx] * v[np.newaxis, np.newaxis, :]
 
 
@@ -364,9 +364,8 @@ def simulate_vis_per_source(
 
     Returns:
         vis (array_like):
-            Complex, shape (NAXES, NFEED, NFREQS, NTIMES, NANTS, NANTS, NSRCS)
-            if ``polarized == True``, or (NFREQS, NTIMES, NANTS, NANTS, NSRCS)
-            otherwise.
+            Complex, shape (nax, nfeed, nfreq, ntime, nant, nsrcs) if ``polarized == True``, 
+            or (NFREQS, NTIMES, NANTS, NSRCS) otherwise.
     """
     nsrcs = ra.size
     
@@ -422,7 +421,7 @@ def simulate_vis_per_source(
         vis_shape = (naxes, nfeeds, freqs.size, lsts.size, nants, nsrcs)
     else:
         vis_shape = (freqs.size, lsts.size, nants, nsrcs)
-    vis = np.zeros(vis_shape, dtype=complex_dtype)
+    vis = np.zeros(vis_shape, dtype=complex_dtype) # vis.shape: (nax, nfeed, nfreq, ntime, nant, nsrcs)
 
     # Parallel loop over frequencies that calls vis_cpu for UVBeam
     # The `global` declaration is needed so that multiprocessing can handle
@@ -462,14 +461,14 @@ def simulate_vis_per_source(
                                   precision=precision,
                                   polarized=polarized,
                                   subarr_ant=subarr_ant,
-                                 )
+                                 ) # vv.shape: (nfreq, ntime, nant, nsrcs)
 
     # Assign returned values to array
     for i in range(freqs.size):
         if polarized:
-            vis[:, :, i] = vv[i]  # v.shape: (nax, nfeed, ntimes, nant, nant, nsrcs)
+            vis[:, :, i] = vv[i]  # vis.shape: (nax, nfeed, nfreq, ntime, nant, nsrcs)
         else:
-            vis[i] = vv[i]  # v.shape: (ntimes, nant, nant, nsrcs) (unless subarr_ant is not None)
+            vis[i] = vv[i]  # v.shape: (nfreq, ntimes, nant, nsrcs) (unless subarr_ant is not None)
 
     return vis
 
@@ -596,7 +595,7 @@ def simulate_vis_gsm_map(
                                       precision=precision,
                                       latitude=latitude,
                                       use_feed=use_feed,
-                                      multiprocess=multiprocess)
+                                      multiprocess=multiprocess) # vis_pix.shape: (nfreq, ntime, nant, npix)
 
     if logfile is not None:
         with open(logfile, 'a') as f:
