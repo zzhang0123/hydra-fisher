@@ -33,6 +33,8 @@ noise = np.sqrt(noise.real**2 / (40*40 * 166000)) # 40nights, the integration ti
 
 assert noise.dtype == np.float64, "The noise array is not float64."
 
+barrier()
+
 for i in range(len(vis_file_local_list)):
     vis_file_local = vis_file_local_list[i]
     ellm_file_local = ellm_file_local_list[i]
