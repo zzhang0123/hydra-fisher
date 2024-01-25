@@ -6,7 +6,7 @@ from pyuvdata import UVData
 # Data preprocessing
 
 class DataProcessing():
-    def __init__(self, directory, template, cross_only=True, one_way_baseline=True, minimum_ell=0, maximum_bln_length=95):
+    def __init__(self, directory, template, cross_only=True, one_way_baseline=True, minimum_ell=5, minimum_bln_length=5,  maximum_bln_length=95):
         """
         Input:
         directory: directory where the data files are stored
@@ -233,7 +233,7 @@ class DataProcessing():
         self.blns_length_masked = self.bln_length_array[mask]
         # Apply masks to the data  
 
-        hist, bin_edges = np.histogram(self.blns_length_masked, bins=20)
+        hist, bin_edges = np.histogram(self.blns_length_masked, bins=10)
         bin_indices = np.digitize(self.blns_length_masked, bins=bin_edges, right=True)
         bin_counts = np.zeros(bin_indices.shape)
         for i in range(bin_indices.size):

@@ -22,8 +22,17 @@ from scipy.optimize import minimize
 
 class AngularStructure(object):
     l_pivot = 1000.0
-    ell_c = 10
+    #ell_c = 10
 
+    def angular_covariance(self, ell):
+        return np.exp(self.A)*(ell / self.l_pivot)**(self.alpha)
+    
+    def angular_covar_alpha_derivative(self, ell):
+        return np.exp(self.A)*(ell / self.l_pivot)**(self.alpha) * np.log(ell / self.l_pivot)
+    
+    def angular_covar_A_derivative(self, ell):
+        return np.exp(self.A)*(ell / self.l_pivot)**(self.alpha)
+    """
     def angular_covariance(self, ell):
         result = np.zeros_like(np.array(ell))
         for i in range(len(ell)):
@@ -50,7 +59,7 @@ class AngularStructure(object):
             else:
                 result[i] = (np.e ** self.A)*(ell[i] / self.l_pivot)**(self.alpha)
         return result
-        
+    """    
 
 """
 class AngularStructure(object):
@@ -125,7 +134,7 @@ class GalacticSynchrotron(BaseAPS):
     #A = 7.00e-4
     A = -7.264
     alpha = -2.40
-    beta = -2.80
+    beta = -2.60
     zeta = 4.0
 
 class ExtragalacticPointSource(BaseAPS):
@@ -170,7 +179,7 @@ class ExtragalacticBackground1(BaseAPS):
     A = -8.112
     alpha = -2.40
     beta = -2.66
-    zeta = 4.0
+    zeta = 30.0
 
 class ExtragalacticBackground2(BaseAPS):
     """
@@ -178,7 +187,7 @@ class ExtragalacticBackground2(BaseAPS):
     Units: K^2
     """
     #A = 3.00e-4
-    A = -8.112
+    A = -7
     alpha = 0
     beta = -2.66
     zeta = 30.0
