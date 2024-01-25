@@ -12,9 +12,9 @@ fs = np.load('/cosma/home/dp270/dc-zhan11/hydra-fisher/sorted_freqs.npy')/1e6
 
 ell = np.load('/cosma8/data/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/response_sh_ellm_0000.npy')[:,0]
 
-direc = '/cosma8/data/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed'
+direc = '/snap8/scratch/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/'
 
-#pattern = 'XtXresponse_sh_*.npy'
+pattern = 'XtXresponse_sh_*.npy'
 
 n_betas = 3
 
@@ -33,8 +33,8 @@ foregrounds = [Gal_FF,
 n_fields = len(foregrounds)
 
 
-directory = '/cosma8/data/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/XtXresponse_sh.hdf5'
-Finfo = FisherInformation(foregrounds, fs, ell, direc, npy=True)
+# directory = '/cosma8/data/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/XtXresponse_sh.hdf5'
+Finfo = FisherInformation(foregrounds, fs, ell, direc, npy=True, pattern=pattern)
 
 Fisher_matrix = Finfo.parallel_Fisher_calculation()
 
@@ -45,7 +45,7 @@ barrier()
 if rank == 0:
     if not os.path.exists(savedir):
         os.makedirs(savedir)
-    np.save(savedir + 'Fisher_matrix_1.npy', Fisher_matrix)
-    np.save(savedir + 'Fisher_parameter_inds_1.npy', np.array(Finfo.all_params_list))
+    np.save(savedir + 'Fisher_matrix_25Jan_1.npy', Fisher_matrix)
+    np.save(savedir + 'Fisher_parameter_25Jan_1.npy', np.array(Finfo.all_params_list))
     print('Fisher matrix saved.')
 

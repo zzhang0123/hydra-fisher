@@ -21,7 +21,7 @@ def trace_trick(M1, C1, M2, C2):
 # Another trick: Tr(M1 @ C1 @ M2 @ C2) = Tr(M2.T @ C1 @ M1.T @ C2)
 
 class FisherInformation():
-    def __init__(self, APS_obj_list, freqs, ell, directory, npy=False, pattern='XtXresponse_sh_*.npy'):
+    def __init__(self, APS_obj_list, freqs, ell, directory, npy=True, pattern='XtXresponse_sh_*.npy'):
         """"
         APS_obj_list: a list of (universal SED) APS classes
         freqs: a list of frequencies in MHz
