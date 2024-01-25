@@ -22,28 +22,35 @@ from scipy.optimize import minimize
 
 class AngularStructure(object):
     l_pivot = 1000.0
+    ell_c = 10
 
-    def angular_covariance(self, ell, ell_c = 8):
-        if ell < ell_c:
-            return (np.e ** self.A)*(10 / self.l_pivot)**(self.alpha)
-        else:
-            return (np.e ** self.A)*(ell / self.l_pivot)**(self.alpha)
+    def angular_covariance(self, ell):
+        result = np.zeros_like(np.array(ell))
+        for i in range(len(ell)):
+            if ell[i] < self.ell_c:
+                result[i] = (np.e ** self.A)*(self.ell_c / self.l_pivot)**(self.alpha)
+            else:
+                result[i] = (np.e ** self.A)*(ell[i] / self.l_pivot)**(self.alpha)
+        return result
     
-    def angular_covar_alpha_derivative(self, ell, ell_c = 10):
-        if ell < ell_c:
-            return (np.e ** self.A)*(ell_c / self.l_pivot)**(self.alpha) * np.log(ell_c / self.l_pivot)
-        else:           
-            return (np.e ** self.A)*(ell / self.l_pivot)**(self.alpha) * np.log(ell / self.l_pivot)
-
-    def angular_covar_A_derivative(self, ell, ell_c = 10):
-        if ell < ell_c:
-            return (np.e ** self.A)*(ell_c / self.l_pivot)**(self.alpha)
-        else:
-            return (np.e ** self.A)*(ell / self.l_pivot)**(self.alpha)
+    def angular_covar_alpha_derivative(self, ell):
+        result = np.zeros_like(np.array(ell))
+        for i in range(len(ell)):
+            if ell[i] < self.ell_c:
+                result[i] = (np.e ** self.A)*(self.ell_c / self.l_pivot)**(self.alpha) * np.log(self.ell_c / self.l_pivot)
+            else:           
+                result[i] = (np.e ** self.A)*(ell[i] / self.l_pivot)**(self.alpha) * np.log(ell[i] / self.l_pivot)
+        return result
         
-    angular_covariance = np.vectorize(angular_covariance)
-    angular_covar_alpha_derivative = np.vectorize(angular_covar_alpha_derivative)
-    angular_covar_A_derivative = np.vectorize(angular_covar_A_derivative)
+    def angular_covar_A_derivative(self, ell):
+        result = np.zeros_like(np.array(ell))
+        for i in range(len(ell)):
+            if ell[i] < self.ell_c:
+                result[i] = (np.e ** self.A)*(self.ell_c / self.l_pivot)**(self.alpha)
+            else:
+                result[i] = (np.e ** self.A)*(ell[i] / self.l_pivot)**(self.alpha)
+        return result
+        
 
 """
 class AngularStructure(object):
