@@ -21,7 +21,8 @@ from scipy.optimize import minimize
 
 
 class AngularStructure(object):
-    l_pivot = 1000.0
+    #l_pivot = 1000.0
+    l_pivot = 10.0
     #ell_c = 10
 
     def angular_covariance(self, ell):
@@ -32,7 +33,11 @@ class AngularStructure(object):
     
     def angular_covar_A_derivative(self, ell):
         return np.exp(self.A)*(ell / self.l_pivot)**(self.alpha)
-    """
+
+
+
+
+"""
     def angular_covariance(self, ell):
         result = np.zeros_like(np.array(ell))
         for i in range(len(ell)):
@@ -59,9 +64,9 @@ class AngularStructure(object):
             else:
                 result[i] = (np.e ** self.A)*(ell[i] / self.l_pivot)**(self.alpha)
         return result
-    """    
+"""    
 
-"""
+'''
 class AngularStructure(object):
     l_pivot = 1000.0
 
@@ -73,12 +78,14 @@ class AngularStructure(object):
 
     def angular_covar_A_derivative(self, ell):
         return (ell / self.l_pivot)**(self.alpha)
-"""
+'''
 
 # Angular power spectrum classes: C_l^alpha, beta, zeta 
 
 class BaseAPS(AngularStructure):
     nu_pivot = 130.0
+    aps = 0.0 # create a variable to store the angular power spectrum
+    derivatives = 0.0 # create a variable to store the angular power spectrum derivatives
     
     def frequency_covariance(self, nu1, nu2):
         return (nu1*nu2/self.nu_pivot**2)**(self.beta) * np.exp( -0.5 * (np.log(nu1/nu2) / self.zeta)**2)
@@ -131,8 +138,9 @@ class GalacticSynchrotron(BaseAPS):
     Reference: Mario G. Santos (2005)
     Units: K^2
     """
-    #A = 7.00e-4
-    A = -7.264
+    # A = 7.00e-4
+    # A = -7.264
+    A = 3.78840
     alpha = -2.40
     beta = -2.60
     zeta = 4.0
@@ -143,8 +151,9 @@ class ExtragalacticPointSource(BaseAPS):
     Units: K^2
     """
     #A = 5.70e-5 
-    A = -9.772
-    alpha = -1.1
+    #A = -9.772
+    A = -4.70631
+    alpha = -1.10
     beta = -2.07
     zeta = 1.0
 
@@ -154,7 +163,8 @@ class ExtragalacticFreeFree(BaseAPS):
     Units: K^2
     """
     #A = 1.40e-8
-    A = -18.084
+    #A = -18.084
+    A = -13.47882
     alpha = -1.0
     beta = -2.10
     zeta = 35.0
@@ -165,32 +175,71 @@ class GalacticFreeFree(BaseAPS):
     Units: K^2
     """
     #A = 8.80e-8
-    A = -16.246
+    #A = -16.246
+    A = -2.43048
     alpha = -3.0
     beta = -2.15
     zeta = 35.0
 
 class ExtragalacticBackground1(BaseAPS):
     """
-    Reference: 
+    Different with Galactic synchrotron only in beta 
     Units: K^2
     """
     #A = 3.00e-4
-    A = -8.112
+    A = 3.78840
     alpha = -2.40
     beta = -2.66
-    zeta = 30.0
+    zeta = 4.0
 
 class ExtragalacticBackground2(BaseAPS):
     """
-    Reference: 
+    Smaller A, steeper alpha.
     Units: K^2
     """
     #A = 3.00e-4
-    A = -7
-    alpha = 0
+    A = 3.78840 - np.log(10)
+    alpha = -3.0
     beta = -2.66
-    zeta = 30.0
+    zeta = 4.0
+
+class ExtragalacticBackground3(BaseAPS):
+    """
+    Larger A, flatter alpha.
+    Units: K^2
+    """
+    #A = 3.00e-4
+    A = 3.78840 + np.log(10)
+    alpha = 0.0
+    beta = -2.66
+    zeta = 4.0
+
+class ExtragalacticBackground4(BaseAPS):
+    """
+    Smaller A, flatter alpha.
+    Units: K^2
+    """
+    #A = 3.00e-4
+    A = 3.78840 - np.log(10)
+    alpha = 0.0
+    beta = -2.66
+    zeta = 4.0
+
+class ExtragalacticBackground5(BaseAPS):
+    """
+    Larger A, steeper alpha.
+    Units: K^2
+    """
+    #A = 3.00e-4
+    A = 3.78840 + np.log(10)
+    alpha = -3.0
+    beta = -2.66
+    zeta = 4.0
+
+
+
+
+
 
 
 class CustomizeAPS(BaseAPS):
@@ -269,9 +318,14 @@ class Universal_SED(AngularStructure):
         self.SED_derivatives = result  # shape: (n_beta, n_freqs)
         return 
     
+    def frequency_covariance(self, nu1, nu2):
+        return np.outer(self.SED_function(nu1), self.SED_function(nu2))
 
 
 
+def A10(A1000, alpha):
+    return np.log(np.exp(A1000)*10**(-2*alpha))
 
 
-
+def A1000_from_A10(A10, alpha):
+    return np.log(np.exp(A10)/10**(-2*alpha))

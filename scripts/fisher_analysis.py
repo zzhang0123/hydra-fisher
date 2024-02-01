@@ -24,10 +24,10 @@ Ext_FF = Universal_SED(fs, ExtragalacticFreeFree(), n_betas)
 Ext_point = Universal_SED(fs, ExtragalacticPointSource(), n_betas)
 Background = Universal_SED(fs, ExtragalacticBackground1(), n_betas)
 
-foregrounds = [Gal_FF, 
-               Gal_Sync, 
+foregrounds = [Gal_Sync, 
+               Gal_FF,
+               Ext_point, 
                Ext_FF,
-               Ext_point,
                Background]
 
 n_fields = len(foregrounds)
@@ -45,7 +45,7 @@ barrier()
 if rank == 0:
     if not os.path.exists(savedir):
         os.makedirs(savedir)
-    np.save(savedir + 'Fisher_matrix_25Jan_1.npy', Fisher_matrix)
-    np.save(savedir + 'Fisher_parameter_25Jan_1.npy', np.array(Finfo.all_params_list))
+    np.save(savedir + 'Fisher_matrix_1Feb_1.npy', Fisher_matrix)
+    np.save(savedir + 'Fisher_parameter_1Feb_1.npy', np.array(Finfo.all_params_list))
     print('Fisher matrix saved.')
 

@@ -4,6 +4,8 @@ import numpy as np
 import glob
 import re
 import os
+import matplotlib.pyplot as plt
+import corner
 from mpiutils import rank0
 
 
@@ -158,3 +160,24 @@ def extract_freqs(file_path):
                 if match:
                     return float(match.group(1))
     return None
+
+
+def corner_plot(mean, covariance_matrix, parameter_labels, additional_text=None, filename=None, space=0.1):
+    # Generate samples from a multivariate normal distribution
+    num_samples = 10000
+    samples = np.random.multivariate_normal(mean, covariance_matrix, size=num_samples)
+
+    # parameter_labels = ['A', r'$\alpha$', r'$\beta_0$', r'$\beta_1$', r'$\beta_2$']
+
+    # Create the corner plot
+    figure = corner.corner(samples, labels=parameter_labels, show_titles=True, title_fmt=".2e")
+    figure.subplots_adjust(wspace=space, hspace=space)
+
+    if additional_text:
+        plt.figtext(0.85, 0.85, additional_text, ha='center', va='center', fontsize=20, color='blue')
+
+    if filename:
+        plt.savefig(filename, dpi=300)
+
+    # Show the plot
+    plt.show()

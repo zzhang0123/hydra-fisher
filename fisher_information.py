@@ -39,8 +39,8 @@ class FisherInformation():
         else:
             self.directory = directory
 
-        self.SED_all = np.array([APS_obj.SED for APS_obj in APS_obj_list])
-        self.C_ell_all = np.array([0.5 * APS_obj.angular_covariance(ell) for APS_obj in APS_obj_list]).flatten() # 0.5 factor accounts for the real/imag parts of the covariance
+        self.SED_all = np.array([APS_obj.SED for APS_obj in APS_obj_list]) # shape (n_fields, n_freqs)
+        self.C_ell_all = np.concatenate([0.5 * APS_obj.angular_covariance(ell) for APS_obj in APS_obj_list]) # 0.5 factor accounts for the real/imag parts of the covariance
 
         self.M = self.operator(self.SED_all, self.SED_all)
         self.C_aux = np.linalg.inv(np.diag(1/self.C_ell_all) + self.M) 
@@ -52,7 +52,6 @@ class FisherInformation():
             print("The number of fields is %d. \n" % self.n_fields)
             print("The number of frequencies is %d. \n" % self.n_freqs)
             print("The number of parameters is %d.\n" % self.n_all_params)
-            # print("The number of XtX matrices is %d.\n" % len(self.sorted_filenames))
             print("Fisher Information object initialized. \n")
 
     def generate_partial_derivative_SED_all(self, i, j):
@@ -281,14 +280,9 @@ class FisherInformation():
     
 
 
-class BaseFisherMatrix():
-    def __init__(self, data_covariance_class_instance, *args):
-        self.data_covariance_obj = data_covariance_class_instance
-        self.ags_classes = args
-        # self.total_APS_function = self.sum_functions_inputs(args)
-        self.n_params = 4 * len(args)
-        Sigma = self.data_covariance_obj(self.sum_aps_inputs) + self.data_covariance_obj.noise_covariance()
-        self.Sigma_inv = np.linalg.inv(Sigma)
+class FisherMatrix_cosmic_variance():
+    def __init__(self, class_instance_list, ells, freqs):
+        self.components = class_instance_list
     
     def sum_functions_inputs(self, *args):
         def sum_func(*inputs):
