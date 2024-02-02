@@ -61,9 +61,9 @@ if myid == 0:
     print("(Workers finished loading metadata.)")
 
 # Get freqs, lsts, ants etc.
-# freqs = np.unique(uvd.freq_array)
-freqs = np.load('/cosma/home/dp270/dc-zhan11/hydra-fisher/sorted_freqs.npy')
-lsts = np.unique(uvd.lst_array)
+freqs = np.unique(uvd.freq_array)
+#freqs = np.load('/cosma/home/dp270/dc-zhan11/hydra-fisher/sorted_freqs.npy')
+
 antpos, antnums = uvd.get_ENU_antpos(center=False, pick_data_ants=True)
 ants = {}
 #for i in range(len(antnums)):
@@ -155,8 +155,11 @@ if myid == 0:
 
 
 # Save operator to .npy file for each chunk
-outfile = os.path.join(outdir, "auto_correlation_%04d" % myid)
+outfile = os.path.join(outdir, "auto_correlation_vbeam_%04d" % myid)
 np.save(outfile, vis)
+if myid == 0:
+    np.save(os.path.join(outdir, "auto_correlation_freqs"), freqs)
+
 print("Output file:", "auto_correlation_%04d" % myid)
 
     
