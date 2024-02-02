@@ -13,10 +13,11 @@ fs = np.load('/cosma/home/dp270/dc-zhan11/hydra-fisher/sorted_freqs.npy')/1e6
 ell = np.load('/snap8/scratch/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/response_sh_ellm_0000.npy')[:,0]
 
 direc = '/snap8/scratch/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/'
+#direc = '/snap8/scratch/dp270/dc-zhan11/response_sh_vivaldi_lmax90_nside64_processed/'
 
 pattern = 'XtXresponse_sh_*.npy'
 
-n_betas = 3
+n_betas = 1
 
 Gal_FF = Universal_SED(fs, GalacticFreeFree(), n_betas)
 Gal_Sync = Universal_SED(fs, GalacticSynchrotron(), n_betas)
@@ -45,7 +46,7 @@ barrier()
 if rank == 0:
     if not os.path.exists(savedir):
         os.makedirs(savedir)
-    np.save(savedir + 'Fisher_matrix_1Feb_1.npy', Fisher_matrix)
-    np.save(savedir + 'Fisher_parameter_1Feb_1.npy', np.array(Finfo.all_params_list))
+    np.save(savedir + 'Fisher_matrix_Gaussian_1.npy', Fisher_matrix)
+    np.save(savedir + 'Fisher_parameter_Gaussian_1.npy', np.array(Finfo.all_params_list))
     print('Fisher matrix saved.')
 
