@@ -12,7 +12,7 @@ import numpy as np
 
 
 
-directory = "/cosma8/data/dp270/dc-bull2/response_sh_gaussian_lmax90_nside64/"
+directory = "/cosma8/data/dp270/dc-bull2/response_sh_vivaldi_lmax90_nside64_band1/"
 temp_file = "/cosma/home/dp270/dc-bull2/H4C_sum_all-bands_frf_etc_150_170MHz.shortbls.uvh5"
 
 vis_file_list = get_sorted_filenames(directory, 'response_sh_*.npy')
@@ -25,7 +25,7 @@ assert len(vis_file_local_list)==len(ellm_file_local_list), "The number of local
 
 VisResponse = DataProcessing(directory, template=temp_file)
 
-save_directory = "/snap8/scratch/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/"
+save_directory = "/snap8/scratch/dp270/dc-zhan11/response_sh_vivaldi_lmax90_nside64_processed/"
 
 noise = np.load("/cosma8/data/dp270/dc-zhan11/auto_response_sh_gaussian_lmax90_nside64/auto_correlation_0000.npy")[:,:,0]
 
