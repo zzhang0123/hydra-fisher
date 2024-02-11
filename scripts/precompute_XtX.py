@@ -11,9 +11,44 @@ from fisher_utils import get_sorted_filenames, radian_per_hour
 import numpy as np
 
 
+description = "Precompute ..."
+parser = argparse.ArgumentParser(description=description)
+parser.add_argument("--template", type=str, action="store", 
+                    required=True, dest="template",
+                    help="Path to template UVData file.")
 
-directory = "/cosma8/data/dp270/dc-bull2/response_sh_vivaldi_lmax90_nside64_band1/"
-temp_file = "/cosma/home/dp270/dc-bull2/H4C_sum_all-bands_frf_etc_150_170MHz.shortbls.uvh5"
+parser.add_argument("--datadir", type=str, action="store", 
+                    required=True, dest="datadir",
+                    help="Path to X operator directory.")
+
+parser.add_argument("--noise", type=str, action="store", 
+                    required=True, dest="noisedir",
+                    help="Path to noise.")
+
+parser.add_argument("--outdir", type=str, action="store", 
+                    required=True, dest="outdir",
+                    help="Path to output directory.")
+
+
+args = parser.parse_args()
+
+# Configure mpi
+comm = MPI.COMM_WORLD
+myid = comm.Get_rank()
+nworkers = comm.Get_size()
+
+# Set-up variables
+
+#save_directory = "/snap8/scratch/dp270/dc-zhan11/response_sh_vivaldi_lmax90_nside64_processed/"
+save_directory = args.outdir
+
+#noise = np.load("/cosma8/data/dp270/dc-zhan11/auto_response_sh_gaussian_lmax90_nside64/auto_correlation_0000.npy")[:,:,0]
+noise = np.load(args.noisedir)[:,:,0]
+
+directory = args.datadir
+#"/cosma8/data/dp270/dc-bull2/response_sh_vivaldi_lmax90_nside64_band1/"
+temp_file = args.template
+#"/cosma/home/dp270/dc-bull2/H4C_sum_all-bands_frf_etc_115_135MHz.shortbls.uvh5"
 
 vis_file_list = get_sorted_filenames(directory, 'response_sh_*.npy')
 ellm_file_list = get_sorted_filenames(directory, 'response_sh_ellm_*.npy')
@@ -25,9 +60,7 @@ assert len(vis_file_local_list)==len(ellm_file_local_list), "The number of local
 
 VisResponse = DataProcessing(directory, template=temp_file)
 
-save_directory = "/snap8/scratch/dp270/dc-zhan11/response_sh_vivaldi_lmax90_nside64_processed/"
 
-noise = np.load("/cosma8/data/dp270/dc-zhan11/auto_response_sh_gaussian_lmax90_nside64/auto_correlation_0000.npy")[:,:,0]
 
 noise = np.sqrt(noise.real**2 / (40*40 * 166000)) # 40nights, the integration time is 40s, and the frequency bandwidth is 166000 Hz.
 

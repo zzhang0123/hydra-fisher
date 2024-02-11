@@ -6,6 +6,7 @@ from pyuvdata import UVData
 import healpy as hp
 import argparse, os, sys, time
 import pyuvsim
+from hera_sim.beams import PolyBeam
 
 sys.path.insert(0,'/cosma/home/dp270/dc-zhan11/Hydra/')
 
@@ -26,6 +27,9 @@ parser.add_argument("--nside", type=int, action="store", default=64,
 parser.add_argument("--outdir", type=str, action="store", 
                     required=True, dest="outdir",
                     help="Path to output directory.")
+parser.add_argument("--beam", type=str, action="store", 
+                    required=True, dest="beam",
+                    help="Beam type ('gaussian' or 'polybeam').")
 
 args = parser.parse_args()
 
@@ -39,6 +43,7 @@ lmax = args.lmax
 nside = args.nside
 outdir = args.outdir
 template = args.template
+beam_str = args.beam
 
 # Check that output directory exists
 if myid == 0:
@@ -101,9 +106,27 @@ idxs = np.arange(freqs.size)
 blocks = np.array_split(idxs, nworkers)
 max_block_size = np.max([b.size for b in blocks])
 
-# Simple Gaussian beams for now
-beams = [pyuvsim.AnalyticBeam('gaussian', diameter=14.) 
-         for i in range(len(antnums))]
+# Load beams and set interpolator properties
+if beam_str.lower() == 'polybeam':
+    print("PolyBeam")
+    # PolyBeam fitted to HERA Fagnoni beam
+    beam_coeffs=[  0.29778665, -0.44821433, 0.27338272, 
+                  -0.10030698, -0.01195859, 0.06063853, 
+                  -0.04593295,  0.0107879,  0.01390283, 
+                  -0.01881641, -0.00177106, 0.01265177, 
+                  -0.00568299, -0.00333975, 0.00452368,
+                   0.00151808, -0.00593812, 0.00351559
+                 ]
+    beams = [PolyBeam(beam_coeffs, spectral_index=-0.6975, ref_freq=1.e8)
+             for ant in ants]
+
+elif beam_str.lower() == 'gaussian':
+    beams = [pyuvsim.AnalyticBeam('gaussian', diameter=14.) 
+             for ant in ants]
+    
+else:
+    raise ValueError("Invalid beam type: %s" % beam_str)
+        
 
 # Output metadata
 if myid == 0:
@@ -155,11 +178,14 @@ if myid == 0:
 
 
 # Save operator to .npy file for each chunk
-outfile = os.path.join(outdir, "auto_correlation_vbeam_%04d" % myid)
-np.save(outfile, vis)
 if myid == 0:
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)     
     np.save(os.path.join(outdir, "auto_correlation_freqs"), freqs)
 
+outfile = os.path.join(outdir, "auto_correlation_"+beam_str+"_%04d" % myid)
+np.save(outfile, vis)
+   
 print("Output file:", "auto_correlation_%04d" % myid)
 
     

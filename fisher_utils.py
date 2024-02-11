@@ -174,7 +174,7 @@ def corner_plot(mean, covariance_matrix, parameter_labels, additional_text=None,
     figure.subplots_adjust(wspace=space, hspace=space)
 
     if additional_text:
-        plt.figtext(0.85, 0.85, additional_text, ha='center', va='center', fontsize=20, color='blue')
+        plt.figtext(0.75, 0.85, additional_text, ha='center', va='center', fontsize=20, color='blue')
 
     if filename:
         plt.savefig(filename, dpi=300)
