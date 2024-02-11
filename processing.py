@@ -6,7 +6,8 @@ from pyuvdata import UVData
 # Data preprocessing
 
 class DataProcessing():
-    def __init__(self, directory, template, cross_only=True, one_way_baseline=True, minimum_ell=5, minimum_bln_length=5,  maximum_bln_length=95):
+    def __init__(self, directory, template, cross_only=True, one_way_baseline=True, minimum_ell=5, max_ell = 90, 
+                 minimum_bln_length=5,  maximum_bln_length=95):
         """
         Input:
         directory: directory where the data files are stored
@@ -79,10 +80,11 @@ class DataProcessing():
         self.mmodes_mask = np.concatenate( (np.arange(self.NLMS), self.NLMS + np.where(self.m>0)[0]) )
         ell = np.append(self.ell, self.ell[np.where(self.m>0)])
         m = np.append(self.m, self.m[np.where(self.m>0)])
-        self.lmodes_mask = np.where(ell>=self.minimum_ell)[0]
+        aux_condition = np.where((ell>=self.minimum_ell) & (ell<=self.maximum_ell) )
+        self.lmodes_mask = aux_condition[0]
         # Update the masked ell and m arrays
-        self.ell = ell[np.where(ell>=self.minimum_ell)]
-        self.m = m[np.where(ell>=self.minimum_ell)]
+        self.ell = ell[aux_condition]
+        self.m = m[aux_condition]
         
 
         # Apply baseline filter
