@@ -36,19 +36,19 @@ args = parser.parse_args()
 
 
 #fs = np.load('/cosma/home/dp270/dc-zhan11/hydra-fisher/sorted_freqs.npy')/1e6
-fs = np.load(argparse.frequency)/1e6
+fs = np.load(args.frequency)/1e6
 
 #ell = np.load('/snap8/scratch/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/response_sh_ellm_0000.npy')[:,0]
-ell = np.load(argparse.ell)[:,0]
+ell = np.load(args.ell)[:,0]
 
 #direc = '/snap8/scratch/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/'
 #direc = '/snap8/scratch/dp270/dc-zhan11/response_sh_vivaldi_lmax90_nside64_processed/'
-direc = argparse.response
+direc = args.response
 
 #savedir = '/cosma8/data/dp270/dc-zhan11/fisher_matrix/'
-savedir = argparse.outdir
+savedir = args.outdir
 
-beam_kind = argparse.beam
+beam_kind = args.beam
 
 
 pattern = 'XtXresponse_sh_*.npy'
