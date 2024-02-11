@@ -8,12 +8,48 @@ from fisher_information import FisherInformation
 
 
 
-fs = np.load('/cosma/home/dp270/dc-zhan11/hydra-fisher/sorted_freqs.npy')/1e6
+description = "Computing the Fisher matrix ..."
+parser = argparse.ArgumentParser(description=description)
+parser.add_argument("--frequency", type=str, action="store", 
+                    required=True, dest="frequency",
+                    help="Path to frefuency file.")
 
-ell = np.load('/snap8/scratch/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/response_sh_ellm_0000.npy')[:,0]
+parser.add_argument("--ell", type=str, action="store", 
+                    required=True, dest="ell",
+                    help="Path to ell file.")
 
-direc = '/snap8/scratch/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/'
+parser.add_argument("--response", type=str, action="store", 
+                    required=True, dest="response",
+                    help="Path to XtX operator.")
+
+parser.add_argument("--outdir", type=str, action="store", 
+                    required=True, dest="outdir",
+                    help="Path to output directory.")
+
+parser.add_argument("--beam", type=str, action="store",
+                    required=False, dest="beam",
+                    help="The name of the beam.")
+
+
+args = parser.parse_args()
+
+
+
+#fs = np.load('/cosma/home/dp270/dc-zhan11/hydra-fisher/sorted_freqs.npy')/1e6
+fs = np.load(argparse.frequency)/1e6
+
+#ell = np.load('/snap8/scratch/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/response_sh_ellm_0000.npy')[:,0]
+ell = np.load(argparse.ell)[:,0]
+
+#direc = '/snap8/scratch/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/'
 #direc = '/snap8/scratch/dp270/dc-zhan11/response_sh_vivaldi_lmax90_nside64_processed/'
+direc = argparse.response
+
+#savedir = '/cosma8/data/dp270/dc-zhan11/fisher_matrix/'
+savedir = argparse.outdir
+
+beam_kind = argparse.beam
+
 
 pattern = 'XtXresponse_sh_*.npy'
 
@@ -34,19 +70,16 @@ foregrounds = [Gal_Sync,
 n_fields = len(foregrounds)
 
 
-# directory = '/cosma8/data/dp270/dc-zhan11/response_sh_gaussian_lmax90_nside64_processed/XtXresponse_sh.hdf5'
 Finfo = FisherInformation(foregrounds, fs, ell, direc, npy=True, pattern=pattern)
 
 Fisher_matrix = Finfo.parallel_Fisher_calculation()
-
-savedir = '/cosma8/data/dp270/dc-zhan11/fisher_matrix/'
 
 barrier()
 
 if rank == 0:
     if not os.path.exists(savedir):
         os.makedirs(savedir)
-    np.save(savedir + 'Fisher_matrix_Gaussian_1.npy', Fisher_matrix)
-    np.save(savedir + 'Fisher_parameter_Gaussian_1.npy', np.array(Finfo.all_params_list))
+    np.save(savedir + 'Fisher_matrix_'+beam_kind+'.npy', Fisher_matrix)
+    np.save(savedir + 'Fisher_parameter'+beam_kind+'.npy', np.array(Finfo.all_params_list))
     print('Fisher matrix saved.')
 
