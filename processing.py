@@ -7,7 +7,7 @@ from pyuvdata import UVData
 
 class DataProcessing():
     def __init__(self, directory, template, cross_only=True, one_way_baseline=True, minimum_ell=5, max_ell = 90, 
-                 minimum_bln_length=5,  maximum_bln_length=95):
+                 minimum_bln_length=1.,  maximum_bln_length=95):
         """
         Input:
         directory: directory where the data files are stored
@@ -19,6 +19,8 @@ class DataProcessing():
         self.cross_only = cross_only
         self.one_way_baseline = one_way_baseline
         self.minimum_ell = minimum_ell
+        self.maximum_ell = max_ell
+        self.minimum_bln_length = minimum_bln_length
         self.maximum_bln_length = maximum_bln_length
 
         uvd = UVData()
@@ -89,6 +91,7 @@ class DataProcessing():
 
         # Apply baseline filter
         vis = self.baseline_filter(vis, cross_only=self.cross_only, one_way_baseline=self.one_way_baseline, 
+                                   minimum_bln_length=self.minimum_bln_length,
                                    maximum_bln_length=self.maximum_bln_length)
         # shape=(NFREQS, NTIMES, NBASELINES, NLMS*2), data type=complex
 
