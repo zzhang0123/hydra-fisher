@@ -7,7 +7,7 @@ from pyuvdata import UVData
 
 class DataProcessing():
     def __init__(self, directory, template, cross_only=True, one_way_baseline=True, minimum_ell=5, max_ell = 90, 
-                 minimum_bln_length=1.,  maximum_bln_length=95):
+                 minimum_bln_length=1.,  maximum_bln_length=75):
         """
         Input:
         directory: directory where the data files are stored
